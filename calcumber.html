@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calcumber</title>
+<title>Calculiner</title>
 <style>
   :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --border:#d4d4d4; --blue:#2563eb; --red:#dc2626; --band:rgba(0,0,0,.035); }
   @media (prefers-color-scheme: dark) {
@@ -50,9 +50,8 @@
   .gh { position: absolute; line-height: 32px; white-space: pre; color: var(--ghost); }
 
   .summary { width: min(760px,100%); margin-top: 22px; font-size: 13.5px; line-height: 1.55; }
-  .summary > summary { cursor: pointer; user-select: none; color: var(--ghost); font-size: 13px; }
-  .summary > summary:hover { color: var(--fg); }
-  .summary ul { margin: 10px 0 0; padding-left: 20px; }
+  .summary h2 { font-size: 14px; margin: 0 0 8px; }
+  .summary ul { margin: 0; padding-left: 20px; }
   .summary li { margin-bottom: 5px; }
   .summary code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--band);
                   padding: 1px 5px; border-radius: 4px; }
@@ -60,7 +59,7 @@
 </style>
 </head>
 <body>
-  <h1>CALCUMBER</h1>
+  <h1>CALCULINER</h1>
 
   <div class="bar">
     <label><input type="checkbox" id="commaToggle"> Commas in results</label>
@@ -81,24 +80,23 @@
     <span class="probe" id="probe"></span>
     <div class="overlay" id="overlay"></div>
     <textarea id="input" spellcheck="false" autofocus
-      placeholder="Try:  3+ 5   |   200 + 10%   |   v=1.5 then 2v   |   5!   |   1+1+1+1 [Tab] then +5"></textarea>
+      placeholder="Try:  3+ 5   |   200 + 10%   |   v=1.5 then 2v   |   5!   |   1+1+1+1 [Enter] then +5"></textarea>
   </div>
 
-  <details class="summary">
-    <summary>Calcumber instructions (click to expand)</summary>
+  <div class="summary">
+    <h2>What Calculiner does</h2>
     <ul>
-      <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each newline is its own row, and rows are shaded alternately so you can tell them apart. Long lines use the full box width before wrapping.</li>
+      <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately so you can tell them apart. Long lines use the full box width before wrapping.</li>
       <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>×</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code> <code>!</code> (factorial, whole numbers 0 to 170). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
       <li><b>Unfinished input.</b> <code>39+1+</code> still shows <span class="g">=40</span>, and open brackets are closed for you.</li>
-      <li><b>Independent calculations.</b> After a locked result, type <code>;</code> to start a separate calculation on the same line. Spaces and commas do not separate calculations. The new calculation stays editable while you type; press <code>Tab</code> or type <code>=</code> to lock its result.</li>
-      <li><b>Locking a result.</b> Type <code>=</code> or press <code>Tab</code> and the answer turns <span class="b">blue</span>. Keep typing an operator after it to continue from that number. Edit anything earlier on the line and the blue numbers update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a blue result, so use an operator.</li>
-      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>. Names are letters only and not case-sensitive. Several can share a line: <code>v=10, inch=25, x=100</code>. Use them anywhere in the document: <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5. The latest definition wins everywhere, regardless of where it appears. A definition must come before any numbers or operators on its line.</li>
-      <li><b>Comments are ignored.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. <code>x</code> is not multiplication; use <code>*</code> or <code>×</code>.</li>
+      <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code>, or press <code>Enter</code>. The answer turns <span class="b">blue</span>. Enter also starts a new line, but only if the line has something to calculate (text-only lines just get a new line). <code>Shift+Enter</code> always gives a plain new line. Keep typing an operator after a blue result to continue from that number. Edit anything earlier on the line and the blue numbers update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a blue result, so use an operator.</li>
+      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 ; rr=2 ; dd=4</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3) and <code>1+v</code> = 2.5. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come before any numbers or operators on its line.</li>
+      <li><b>Comments are ignored.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. <code>x</code> is not multiplication; use <code>*</code> or <code>×</code>.</li>
       <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each blue result carries forward exactly as shown.</li>
       <li><b>Commas in results.</b> Off by default. Choose International (1,234,567), Indian (12,34,567) or East Asian (123,4567).</li>
       <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials and malformed lines show no result, so you never see a wrong number.</li>
     </ul>
-  </details>
+  </div>
 
 <script>
 /* ---------- Elements & settings ---------- */
@@ -113,6 +111,7 @@ if (/-IN$/i.test(navigator.language || '')) commaStyle.value = 'indian';
 
 const LINE_H = 32, PAD = 16;
 let lastRuns = [];     // absolute positions of every "=" + its managed blue result
+let lastViews = [];    // per-line analysis of the current text
 
 function group(intPart, style) {
   if (style === 'indian') {
@@ -145,8 +144,10 @@ function roundDec(n) {
 }
 
 /* ---------- Tokenizer ----------
-   Numbers, operators and words. Separators are handled before tokenizing; other punctuation is ignored. */
+   Numbers, operators and letter-only words. Words containing digits (v99t) are
+   comments. Commas and any other punctuation are ignored. */
 function tokenize(s) {
+  s = s.replace(/,/g, '');
   const tokens = [];
   let i = 0;
   while (i < s.length) {
@@ -159,8 +160,11 @@ function tokenize(s) {
       if (!isFinite(v)) throw new Error('too big');
       tokens.push({ t: 'num', v }); i += m[0].length; continue;
     }
-    m = rest.match(/^\p{L}+/u);
-    if (m) { tokens.push({ t: 'word', name: m[0].toLowerCase() }); i += m[0].length; continue; }
+    m = rest.match(/^\p{L}[\p{L}\d]*/u);
+    if (m) {
+      if (!/\d/.test(m[0])) tokens.push({ t: 'word', name: m[0].toLowerCase() });
+      i += m[0].length; continue;               // mixed letter+digit word = ignored comment
+    }
     if (c === '+') { tokens.push({ t: '+' }); i++; continue; }
     if ('-−–'.includes(c)) { tokens.push({ t: '-' }); i++; continue; }
     if ('*×'.includes(c)) { tokens.push({ t: '*' }); i++; continue; }
@@ -350,47 +354,50 @@ function analyzeTail(line, env, strict) {
 }
 
 /* Variable definitions live at the start of a line: name=number (several allowed).
-   Anything before a definition may only be letters / spaces / punctuation. */
+   Anything before a definition may only be letters / spaces / punctuation.
+   Names with digits in them are accepted but ignored (treated as comments). */
 const NUM_RE = /^[ \t]*(-?(?:\d+(?:,\d+)*(?:\.\d+)?|\.\d+))(?!\d|\.\d)(?![ \t]*[+\-*\/×÷−–%!()])/;
 const EXPR_CHAR = /[\d+\-*\/()%!×÷−–]/;
+const MIXED_G = /\p{L}[\p{L}\d]*\d[\p{L}\d]*/gu;
 
-function analyzeLine(line, globalEnv) {
-  const env = new Map(globalEnv);
+function parseDefs(line) {
   const defs = [];
   let pos = 0, blocked = false;
-
   while (true) {
     const e = line.indexOf('=', pos);
     if (e < 0) break;
     const seg = line.slice(pos, e);
-    if (EXPR_CHAR.test(seg)) break;
-    const nm = seg.match(/(\p{L}+)[ \t]*$/u);
+    if (EXPR_CHAR.test(seg.replace(MIXED_G, ' '))) break;
+    const nm = seg.match(/(\p{L}[\p{L}\d]*)[ \t]*$/u);
     if (!nm) break;
     const vm = line.slice(e + 1).match(NUM_RE);
     if (!vm) { blocked = true; break; }       // "v=" being typed, or "v = 3+4": leave line alone
-    const end = e + 1 + vm[0].length;
     defs.push({
       name: nm[1].toLowerCase(),
+      ignored: /\d/.test(nm[1]),
       value: parseFloat(vm[1].replace(/,/g, '')),
       start: pos + nm.index,
-      end
+      end: e + 1 + vm[0].length
     });
-    pos = end;
+    pos = e + 1 + vm[0].length;
   }
-  /* env is document-wide; do not override its latest definitions here. */
+  return { defs, pos, blocked };
+}
 
+function analyzeLine(line, pre, env) {
+  const { defs, pos, blocked } = pre;
   const tail = line.slice(pos);
   const r = blocked
     ? { text: tail, parts: [{ text: tail, cls: '' }], ghost: null, map: c => c, runs: [] }
     : analyzeTail(tail, env, defs.length > 0);
 
-  if (!defs.length) return { text: r.text, parts: r.parts, ghost: r.ghost, map: r.map, runs: r.runs, defs };
+  if (!defs.length) return r;
 
   const parts = [];
   let c = 0;
   for (const d of defs) {
     if (d.start > c) parts.push({ text: line.slice(c, d.start), cls: '' });
-    parts.push({ text: line.slice(d.start, d.end), cls: 'def' });
+    parts.push({ text: line.slice(d.start, d.end), cls: d.ignored ? '' : 'def' });
     c = d.end;
   }
   for (const p of r.parts) parts.push(p);
@@ -399,85 +406,8 @@ function analyzeLine(line, globalEnv) {
     parts,
     ghost: r.ghost,
     map: x => (x < pos ? x : pos + r.map(x - pos)),
-    runs: r.runs.map(x => ({ eq: x.eq + pos, rs: x.rs + pos, re: x.re + pos })),
-    defs
+    runs: r.runs.map(x => ({ eq: x.eq + pos, rs: x.rs + pos, re: x.re + pos }))
   };
-}
-
-/* A semicolon after a locked result begins a new independent calculation.
-   Keep spaces and commas as ordinary input: only semicolons create boundaries.
-   New sections stay editable/live while typing and are locked only when the user
-   types '=' or presses Tab, so multi-digit numbers can be entered normally. */
-function analyzeLineWithIndependent(line, globalEnv) {
-  let lockAt = -1;
-  for (let i = 0; i < line.length; i++) {
-    if (line[i] !== '=') continue;
-    const left = line.slice(0, i);
-    // A variable definition such as v=10 is not a calculation boundary.
-    if (EXPR_CHAR.test(left) && /(?:\d|\)|%|!)[ \t]*$/.test(left)) {
-      lockAt = i;
-      break;
-    }
-  }
-  if (lockAt < 0) return analyzeLine(line, globalEnv);
-
-  const cuts = [];
-  for (let i = lockAt + 1; i < line.length; i++) {
-    if (line[i] === ';') cuts.push(i);
-  }
-  if (!cuts.length) return analyzeLine(line, globalEnv);
-
-  // Keep the semicolon at the beginning of the next chunk. It remains visible
-  // between calculations and doesn't become part of either expression.
-  const chunks = [];
-  let start = 0;
-  for (const cut of cuts) {
-    if (cut > start) chunks.push({ start, end: cut, text: line.slice(start, cut) });
-    start = cut;
-  }
-  if (start < line.length) chunks.push({ start, end: line.length, text: line.slice(start) });
-
-  const out = [], parts = [], runs = [], maps = [];
-  let outOffset = 0, ghost = null;
-  chunks.forEach((chunk, index) => {
-    const source = chunk.text;
-    let evaluated = analyzeLine(source, globalEnv);
-    let autoLocked = false;
-
-    // A following semicolon confirms the preceding independent expression is
-    // complete. Lock that segment now, not on every keystroke (which would make
-    // it impossible to type multi-digit numbers). The final segment remains live.
-    const endedByAnotherSemicolon = index > 0 && index < chunks.length - 1;
-    if (endedByAnotherSemicolon && !evaluated.defs.length && !evaluated.runs.length) {
-      const tokens = resolve(tokenize(source), globalEnv, false);
-      if (tokens.length) {
-        evaluated = analyzeLine(source + '=', globalEnv);
-        autoLocked = true;
-      }
-    }
-
-    out.push(evaluated.text);
-    parts.push(...evaluated.parts);
-    for (const run of evaluated.runs) {
-      runs.push({ eq: outOffset + run.eq, rs: outOffset + run.rs, re: outOffset + run.re });
-    }
-    maps.push({ start: chunk.start, end: chunk.end, outStart: outOffset, map: evaluated.map,
-                sourceLen: source.length, autoLocked, outLen: evaluated.text.length });
-    outOffset += evaluated.text.length;
-    ghost = evaluated.ghost;
-  });
-
-  const text = out.join('');
-  const map = c => {
-    for (const m of maps) {
-      if (c >= m.start && c <= m.end) {
-        if (m.autoLocked && c === m.end) return m.outStart + m.outLen;
-        return m.outStart + m.map(c - m.start);
-      }
-    }
-    return text.length;
-  };
-  return { text, parts, ghost, map, runs, defs: [] };
 }
 
 /* ---------- Rendering ---------- */
@@ -533,30 +463,31 @@ function process() {
   const text = input.value;
   const s0 = input.selectionStart, e0 = input.selectionEnd;
   const lines = text.split('\n');
+
+  // Pass 1: collect variables from ALL lines (later definitions win)
+  const pre = lines.map(parseDefs);
   const env = new Map();
-  /* Collect definitions from the entire document first. Later definitions win,
-     so a variable can be used above or below where it is defined. */
-  for (const line of lines) {
-    const scan = analyzeLine(line, new Map());
-    for (const d of scan.defs) env.set(d.name, d.value);
-  }
+  for (const p of pre) for (const d of p.defs) if (!d.ignored) env.set(d.name, d.value);
+
+  // Pass 2: evaluate every line with the full variable set
   const out = [], views = [];
   lastRuns = [];
   let oOff = 0, nOff = 0, ns = null, ne = null;
-  for (const line of lines) {
-    const r = analyzeLineWithIndependent(line, env);
+  lines.forEach((line, idx) => {
+    const r = analyzeLine(line, pre[idx], env);
     if (ns === null && s0 >= oOff && s0 <= oOff + line.length) ns = nOff + r.map(s0 - oOff);
     if (ne === null && e0 >= oOff && e0 <= oOff + line.length) ne = nOff + r.map(e0 - oOff);
     for (const run of r.runs) lastRuns.push({ eq: nOff + run.eq, rs: nOff + run.rs, re: nOff + run.re });
     out.push(r.text); views.push(r);
     oOff += line.length + 1;
     nOff += r.text.length + 1;
-  }
+  });
   const newText = out.join('\n');
   if (newText !== text) {
     input.value = newText;
     input.setSelectionRange(ns ?? newText.length, ne ?? newText.length);
   }
+  lastViews = views;
   autoGrow();
   renderOverlay(views);
 }
@@ -573,36 +504,33 @@ function insertEq() {
   process();
 }
 
-/* Tab locks a result. Enter completes a calculation and starts a new line.
-   On text/comment-only lines, Enter simply creates a new line. */
 input.addEventListener('keydown', e => {
-  if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+  if (e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
+
+  /* Tab = "=" (Shift+Tab still moves focus away) */
+  if (e.key === 'Tab' && !e.shiftKey) {
     e.preventDefault();
     insertEq();
     return;
   }
-  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
-    e.preventDefault();
-    const caret = input.selectionStart;
-    const lineStart = input.value.lastIndexOf('\n', Math.max(0, caret - 1)) + 1;
-    const lineEndRaw = input.value.indexOf('\n', caret);
-    const lineEnd = lineEndRaw < 0 ? input.value.length : lineEndRaw;
-    const currentLine = input.value.slice(lineStart, lineEnd).trim();
-    // Only auto-lock a plain, unfinished expression. Never append another '='
-    // to a variable assignment, an already locked expression, or a lone number.
-    const isAssignment = /^[\p{L}]+\s*=\s*-?(?:\d+(?:\.\d*)?|\.\d+)\s*$/u.test(currentLine);
-    const hasEquals = currentLine.includes('=');
-    const isNumberOnly = /^-?(?:\d+(?:\.\d*)?|\.\d+)\s*$/.test(currentLine);
-    const hasOperator = /[+*\/×÷%!()]|(?<!^)-/.test(currentLine);
-    if (!isAssignment && !hasEquals && !isNumberOnly && hasOperator) insertEq();
-    const at = input.selectionStart;
-    input.setRangeText('\n', at, input.selectionEnd, 'end');
-    process();
+
+  /* Enter = lock the result (like "=") and start a new line.
+     Plain new line if: text-only line, result already locked, cursor not at line end, or Shift held. */
+  if (e.key === 'Enter' && !e.shiftKey) {
+    const s = input.selectionStart, en = input.selectionEnd, text = input.value;
+    if (s !== en) return;
+    const atLineEnd = s === text.length || text[s] === '\n';
+    const idx = text.slice(0, s).split('\n').length - 1;
+    const v = lastViews[idx];
+    if (atLineEnd && v && v.ghost) {
+      e.preventDefault();
+      input.setRangeText('=\n', s, s, 'end');
+      process();
+    }
   }
 });
 
-/* A separator typed immediately after a blue result stays on the same line.
-   It separates the next calculation instead of creating a new row. */
+/* "=" + result behave as one unit when deleting; typing starts after the result */
 input.addEventListener('beforeinput', e => {
   const t = e.inputType || '';
   const runs = lastRuns;
