@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Live Calculator</title>
 <style>
-  :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --border:#d4d4d4; --blue:#2563eb; --band:rgba(0,0,0,.035); }
+  :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --border:#d4d4d4; --blue:#2563eb; --red:#dc2626; --band:rgba(0,0,0,.035); }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#1b1b1b; --fg:#eaeaea; --ghost:#777; --border:#3a3a3a; --blue:#5b9dff; --band:rgba(255,255,255,.04); }
+    :root { --bg:#1b1b1b; --fg:#eaeaea; --ghost:#777; --border:#3a3a3a; --blue:#5b9dff; --red:#ff6b6b; --band:rgba(255,255,255,.04); }
   }
   body {
     background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif;
-    margin: 0; padding: 28px 16px; display: flex; flex-direction: column; align-items: center;
+    margin: 0; padding: 28px 16px 48px; display: flex; flex-direction: column; align-items: center;
   }
   h1 { font-size: 14px; font-weight: 500; color: var(--ghost); margin: 0 0 12px; letter-spacing: .04em; }
   .bar { width: min(760px,100%); display: flex; gap: 14px; align-items: center;
@@ -28,7 +28,7 @@
   }
   .box textarea, .overlay {
     box-sizing: border-box; width: 100%; margin: 0; border: 0;
-    white-space: break-spaces; word-break: break-all;      /* fill the full width, don't break at spaces */
+    white-space: break-spaces; word-break: break-all;
   }
   .box textarea { padding: 16px 16px 56px 16px; }
   .overlay { position: absolute; inset: 0; padding: 16px 0 56px 0; overflow: hidden;
@@ -44,10 +44,18 @@
   textarea::selection { background: rgba(100,150,255,.35); color: transparent; }
 
   .line { position: relative; min-height: 32px; padding: 0 16px; }
-  .line:nth-child(even) { background: var(--band); }       /* subtle banding per Enter-line */
-  .res { color: var(--blue); }                              /* only the number, not the "=" */
+  .line:nth-child(even) { background: var(--band); }
+  .res { color: var(--blue); }
+  .def { color: var(--red); }
   .gh { position: absolute; line-height: 32px; white-space: pre; color: var(--ghost); }
-  .hint { margin-top: 10px; font-size: 12px; color: var(--ghost); width: min(760px,100%); }
+
+  .summary { width: min(760px,100%); margin-top: 22px; font-size: 13.5px; line-height: 1.55; }
+  .summary h2 { font-size: 14px; margin: 0 0 8px; }
+  .summary ul { margin: 0; padding-left: 20px; }
+  .summary li { margin-bottom: 5px; }
+  .summary code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--band);
+                  padding: 1px 5px; border-radius: 4px; }
+  .summary .r { color: var(--red); } .summary .b { color: var(--blue); } .summary .g { color: var(--ghost); }
 </style>
 </head>
 <body>
@@ -60,15 +68,35 @@
       <option value="indian">12,34,567 (Indian)</option>
       <option value="myriad">123,4567 (East Asian, 4-digit)</option>
     </select>
+    <label>Decimals
+      <select id="decSel">
+        <option>0</option><option>1</option><option selected>2</option>
+        <option>3</option><option>4</option><option>5</option>
+      </select>
+    </label>
   </div>
 
   <div class="box">
-    <span class="probe" id="probe">0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000</span>
+    <span class="probe" id="probe"></span>
     <div class="overlay" id="overlay"></div>
     <textarea id="input" spellcheck="false" autofocus
-      placeholder="Try: 3+ 5,  200 + 10%,  (4*5)/2,  5!,  1+1+1+1=  then  +5"></textarea>
+      placeholder="Try:  3+ 5   |   200 + 10%   |   v=1.5 then 2v   |   5!   |   1+1+1+1 [Tab] then +5"></textarea>
   </div>
-  <div class="hint">Operators: + - * × / ÷ ( ) % ! &nbsp;·&nbsp; Letters and commas are ignored (use them for comments). Type = to lock a result (blue) and keep calculating with it.</div>
+
+  <div class="summary">
+    <h2>What this calculator does</h2>
+    <ul>
+      <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately so you can tell them apart. Long lines use the full box width before wrapping.</li>
+      <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>×</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code> <code>!</code> (factorial, whole numbers 0 to 170). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
+      <li><b>Unfinished input.</b> <code>39+1+</code> still shows <span class="g">=40</span>, and open brackets are closed for you.</li>
+      <li><b>Locking a result.</b> Type <code>=</code> or press <code>Tab</code> and the answer turns <span class="b">blue</span>. Keep typing an operator after it to continue from that number. Edit anything earlier on the line and the blue numbers update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a blue result, so use an operator.</li>
+      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>. Names are letters only and not case-sensitive. Several can share a line: <code>v=10, inch=25, x=100</code>. Use them on the same line or any line below: <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5. Redefining a name affects only the lines after it. A definition must come before any numbers or operators on its line.</li>
+      <li><b>Comments are ignored.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. <code>x</code> is not multiplication; use <code>*</code> or <code>×</code>.</li>
+      <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each blue result carries forward exactly as shown.</li>
+      <li><b>Commas in results.</b> Off by default. Choose International (1,234,567), Indian (12,34,567) or East Asian (123,4567).</li>
+      <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials and malformed lines show no result, so you never see a wrong number.</li>
+    </ul>
+  </div>
 
 <script>
 /* ---------- Elements & settings ---------- */
@@ -77,9 +105,12 @@ const overlay = document.getElementById('overlay');
 const probe = document.getElementById('probe');
 const commaToggle = document.getElementById('commaToggle');
 const commaStyle = document.getElementById('commaStyle');
+const decSel = document.getElementById('decSel');
+probe.textContent = '0'.repeat(100);
 if (/-IN$/i.test(navigator.language || '')) commaStyle.value = 'indian';
 
 const LINE_H = 32, PAD = 16;
+let lastRuns = [];     // absolute positions of every "=" + its managed blue result
 
 function group(intPart, style) {
   if (style === 'indian') {
@@ -99,35 +130,61 @@ function fmt(v) {
   return (neg ? '-' : '') + group(i, commaStyle.value) + (d !== undefined ? '.' + d : '');
 }
 
-const roundVal = n => parseFloat(n.toPrecision(12));
+function roundDec(n) {
+  const d = +decSel.value;
+  if (!isFinite(n) || Math.abs(n) >= 1e15) return n;
+  const a = Math.abs(n);
+  const s = String(a);
+  let r;
+  if (s.includes('e')) r = parseFloat(a.toFixed(d));
+  else r = Number(Math.round(Number(s + 'e' + d)) + 'e-' + d);
+  if (n < 0) r = -r;
+  return r === 0 ? 0 : r;
+}
 
-/* ---------- Tokenizer ---------- */
+/* ---------- Tokenizer ----------
+   Numbers, operators and words. Commas and any other punctuation are ignored. */
 function tokenize(s) {
-  s = s.replace(/,/g, '');                                   // commas ignored
-  s = s.replace(/[\p{L}:;$€£¥₹_#@"']/gu, ' ');               // letters & comment-ish symbols ignored
+  s = s.replace(/,/g, '');
   const tokens = [];
   let i = 0;
   while (i < s.length) {
     const c = s[i];
     if (/\s/.test(c)) { i++; continue; }
-    const m = s.slice(i).match(/^(\d+\.?\d*|\.\d+)/);
+    const rest = s.slice(i);
+    let m = rest.match(/^(\d+\.?\d*|\.\d+)/);
     if (m) {
       const v = parseFloat(m[0]);
       if (!isFinite(v)) throw new Error('too big');
       tokens.push({ t: 'num', v }); i += m[0].length; continue;
     }
+    m = rest.match(/^\p{L}+/u);
+    if (m) { tokens.push({ t: 'word', name: m[0].toLowerCase() }); i += m[0].length; continue; }
     if (c === '+') { tokens.push({ t: '+' }); i++; continue; }
     if ('-−–'.includes(c)) { tokens.push({ t: '-' }); i++; continue; }
     if ('*×'.includes(c)) { tokens.push({ t: '*' }); i++; continue; }
     if ('/÷'.includes(c)) { tokens.push({ t: '/' }); i++; continue; }
     if ('()%!'.includes(c)) { tokens.push({ t: c }); i++; continue; }
-    throw new Error('bad char');
+    i++;                                   // any other character = ignored punctuation
   }
   return tokens;
 }
 
-/* Drop dangling operators / open brackets at the end, auto-close open brackets.
-   "39+1+" -> 39+1     "2*(3+" -> 2*(3) */
+/* Words -> variable values (with implicit multiply). Unknown words are dropped as comments.
+   "seeded" = the line continues from a previous blue result, so "8v" multiplies. */
+function resolve(tokens, env, seeded) {
+  const out = [];
+  for (const t of tokens) {
+    if (t.t !== 'word') { out.push(t); continue; }
+    if (!env.has(t.name)) continue;
+    const prev = out.length ? out[out.length - 1] : (seeded ? { t: 'num' } : null);
+    if (prev && (prev.t === 'num' || prev.t === ')')) out.push({ t: '*' });
+    out.push({ t: 'num', v: env.get(t.name) });
+  }
+  return out;
+}
+
+/* Drop dangling operators / open brackets at the end, auto-close open brackets. */
 function prep(tokens) {
   const t = tokens.slice();
   while (t.length && '+-*/('.includes(t[t.length - 1].t)) t.pop();
@@ -206,20 +263,19 @@ function evalTokens(tokens) {
 }
 
 /* ---------- Line model ----------
-   A line is:  expr0 = R1 expr1 = R2 expr2 ...
-   R_k (the blue run after each "=") is app-managed and always equals the value
+   A line is:  [defs]  expr0 = R1 expr1 = R2 expr2 ...
+   R_k (the blue number after each "=") is app-managed and always equals the value
    of everything before it. Segment k>0 continues from the previous value. */
 const RUN_RE = /^-?\d[\d,]*(?:\.\d+)?(?:e[+-]\d+)?/i;
 
-function analyzeLine(line) {
+function analyzeTail(line, env, strict) {
   const pieces = line.split('=');
   const n = pieces.length;
 
-  // Comment-only before the first "=" -> leave the line completely alone
-  let first;
-  try { first = tokenize(pieces[0]); } catch (e) { first = null; }
-  if (first && first.length === 0) {
-    return { text: line, parts: [{ text: line, cls: '' }], ghost: null, map: c => c };
+  // Nothing calculable before the first "=" -> leave the text alone
+  const first = resolve(tokenize(pieces[0]), env, false);
+  if (first.length === 0) {
+    return { text: line, parts: [{ text: line, cls: '' }], ghost: null, map: c => c, runs: [] };
   }
 
   const exprs = [], runsOld = [];
@@ -239,11 +295,18 @@ function analyzeLine(line) {
     let v = null, g = false;
     if (ok) {
       try {
-        const raw = tokenize(exprs[j]);
-        const own = prep(raw);
-        if (j === 0) { v = roundVal(evalTokens(own)); g = raw.length > 1; }
-        else if (own.length === 0) { v = vals[j - 1]; g = false; }
-        else { v = roundVal(evalTokens([{ t: 'num', v: vals[j - 1] }].concat(own))); g = true; }
+        const res = resolve(tokenize(exprs[j]), env, j > 0);
+        const own = prep(res);
+        if (j === 0) {
+          if (strict && own.length && ['+', '-', '*', '/', ')', '%', '!'].includes(own[0].t)) throw new Error('start');
+          v = roundDec(evalTokens(own));
+          g = res.length > 1;
+        } else if (own.length === 0) {
+          v = vals[j - 1];
+        } else {
+          v = roundDec(evalTokens([{ t: 'num', v: vals[j - 1] }].concat(own)));
+          g = true;
+        }
       } catch (e) { v = null; g = false; }
     }
     if (v === null) ok = false;
@@ -251,15 +314,17 @@ function analyzeLine(line) {
   }
 
   let text = '';
-  const parts = [], ents = [];
+  const parts = [], ents = [], runs = [];
   let o = 0;
   for (let j = 0; j < n; j++) {
     if (j > 0) {
       const runNew = vals[j - 1] !== null ? fmt(vals[j - 1]) : '';
       const o0 = o + 1, o1 = o0 + runsOld[j].length;
+      const eq = text.length;
       text += '=' + runNew;
       parts.push({ text: '=', cls: '' });
       if (runNew) parts.push({ text: runNew, cls: 'res' });
+      runs.push({ eq, rs: eq + 1, re: text.length });
       ents.push({ k: 'run', o0, o1, n1: text.length });
       o = o1;
     }
@@ -280,7 +345,62 @@ function analyzeLine(line) {
     }
     return text.length;
   };
-  return { text, parts, ghost, map };
+  return { text, parts, ghost, map, runs };
+}
+
+/* Variable definitions live at the start of a line: name=number (several allowed).
+   Anything before a definition may only be letters / spaces / punctuation. */
+const NUM_RE = /^[ \t]*(-?(?:\d+(?:,\d+)*(?:\.\d+)?|\.\d+))(?!\d|\.\d)(?![ \t]*[+\-*\/×÷−–%!()])/;
+const EXPR_CHAR = /[\d+\-*\/()%!×÷−–]/;
+
+function analyzeLine(line, globalEnv) {
+  const env = new Map(globalEnv);
+  const defs = [];
+  let pos = 0, blocked = false;
+
+  while (true) {
+    const e = line.indexOf('=', pos);
+    if (e < 0) break;
+    const seg = line.slice(pos, e);
+    if (EXPR_CHAR.test(seg)) break;
+    const nm = seg.match(/(\p{L}+)[ \t]*$/u);
+    if (!nm) break;
+    const vm = line.slice(e + 1).match(NUM_RE);
+    if (!vm) { blocked = true; break; }       // "v=" being typed, or "v = 3+4": leave line alone
+    const end = e + 1 + vm[0].length;
+    defs.push({
+      name: nm[1].toLowerCase(),
+      value: parseFloat(vm[1].replace(/,/g, '')),
+      start: pos + nm.index,
+      end
+    });
+    pos = end;
+  }
+  for (const d of defs) env.set(d.name, d.value);
+
+  const tail = line.slice(pos);
+  const r = blocked
+    ? { text: tail, parts: [{ text: tail, cls: '' }], ghost: null, map: c => c, runs: [] }
+    : analyzeTail(tail, env, defs.length > 0);
+
+  if (!defs.length) return { text: r.text, parts: r.parts, ghost: r.ghost, map: r.map, runs: r.runs, defs };
+
+  const parts = [];
+  let c = 0;
+  for (const d of defs) {
+    if (d.start > c) parts.push({ text: line.slice(c, d.start), cls: '' });
+    parts.push({ text: line.slice(d.start, d.end), cls: 'def' });
+    c = d.end;
+  }
+  for (const p of r.parts) parts.push(p);
+  return {
+    text: line.slice(0, pos) + r.text,
+    parts,
+    ghost: r.ghost,
+    map: x => (x < pos ? x : pos + r.map(x - pos)),
+    runs: r.runs.map(x => ({ eq: x.eq + pos, rs: x.rs + pos, re: x.re + pos })),
+    defs
+  };
 }
 
 /* ---------- Rendering ---------- */
@@ -308,10 +428,10 @@ function renderOverlay(views) {
       const rows = len ? Math.ceil(len / cols) : 1;
       const used = len ? len - (rows - 1) * cols : 0;
       let col = null, rowIdx = 0;
-      if (used + 1 + r.ghost.length <= cols) { col = used + 1; rowIdx = rows - 1; }   // fits on same row
+      if (used + 1 + r.ghost.length <= cols) { col = used + 1; rowIdx = rows - 1; }
       else {
         const next = views[i + 1];
-        if (!next || next.text.trim() === '') { col = 0; rowIdx = rows; }             // drop to next (empty) row
+        if (!next || next.text.trim() === '') { col = 0; rowIdx = rows; }
         /* else: no room and next row is occupied -> hide rather than overlap */
       }
       if (col !== null) {
@@ -335,12 +455,16 @@ function autoGrow() {
 function process() {
   const text = input.value;
   const s0 = input.selectionStart, e0 = input.selectionEnd;
+  const env = new Map();
   const out = [], views = [];
+  lastRuns = [];
   let oOff = 0, nOff = 0, ns = null, ne = null;
   for (const line of text.split('\n')) {
-    const r = analyzeLine(line);
+    const r = analyzeLine(line, env);
+    for (const d of r.defs) env.set(d.name, d.value);
     if (ns === null && s0 >= oOff && s0 <= oOff + line.length) ns = nOff + r.map(s0 - oOff);
     if (ne === null && e0 >= oOff && e0 <= oOff + line.length) ne = nOff + r.map(e0 - oOff);
+    for (const run of r.runs) lastRuns.push({ eq: nOff + run.eq, rs: nOff + run.rs, re: nOff + run.re });
     out.push(r.text); views.push(r);
     oOff += line.length + 1;
     nOff += r.text.length + 1;
@@ -354,32 +478,30 @@ function process() {
   renderOverlay(views);
 }
 
-/* Absolute positions of every "=" + its managed result run (managed lines only) */
-function findRuns(text) {
-  const runs = [];
-  let off = 0;
-  for (const line of text.split('\n')) {
-    let first;
-    try { first = tokenize(line.split('=')[0]); } catch (e) { first = null; }
-    if (!(first && first.length === 0)) {
-      const pieces = line.split('=');
-      let pos = off + pieces[0].length;
-      for (let k = 1; k < pieces.length; k++) {
-        const eq = pos, rs = pos + 1;
-        const m = pieces[k].match(RUN_RE);
-        runs.push({ eq, rs, re: rs + (m ? m[0].length : 0) });
-        pos = rs + pieces[k].length;
-      }
+/* ---------- Keyboard behaviour ---------- */
+function insertEq() {
+  let s = input.selectionStart, en = input.selectionEnd;
+  if (s === en) {
+    for (const r of lastRuns) {
+      if (s > r.eq && s < r.re && r.re > r.rs) { s = en = r.re; break; }
     }
-    off += line.length + 1;
   }
-  return runs;
+  input.setRangeText('=', s, en, 'end');
+  process();
 }
+
+/* Tab = "=" (Shift+Tab still moves focus away) */
+input.addEventListener('keydown', e => {
+  if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    insertEq();
+  }
+});
 
 /* "=" + result behave as one unit when deleting; typing starts after the result */
 input.addEventListener('beforeinput', e => {
   const t = e.inputType || '';
-  const runs = findRuns(input.value);
+  const runs = lastRuns;
   if (!runs.length) return;
   const s = input.selectionStart, en = input.selectionEnd;
 
@@ -415,8 +537,9 @@ input.addEventListener('beforeinput', e => {
 input.addEventListener('input', process);
 commaToggle.addEventListener('change', () => { commaStyle.disabled = !commaToggle.checked; process(); });
 commaStyle.addEventListener('change', process);
+decSel.addEventListener('change', process);
 window.addEventListener('resize', process);
 process();
 </script>
 </body>
-</html>  
+</html>
