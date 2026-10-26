@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Calculator</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --border:#d4d4d4; --blue:#2563eb; --band:rgba(0,0,0,.035); }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1b1b1b; --fg:#eaeaea; --ghost:#777; --border:#3a3a3a; --blue:#5b9dff; --band:rgba(255,255,255,.04); }
+  }
+  body {
+    background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif;
+    margin: 0; padding: 28px 16px; display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-size: 14px; font-weight: 500; color: var(--ghost); margin: 0 0 12px; letter-spacing: .04em; }
+  .bar { width: min(760px,100%); display: flex; gap: 14px; align-items: center;
+         margin-bottom: 10px; font-size: 13px; color: var(--ghost); flex-wrap: wrap; }
+  .bar select { font: inherit; background: var(--bg); color: var(--fg);
+                border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
+  .bar select:disabled { opacity: .45; }
+  .box { position: relative; width: min(760px,100%); border: 1px solid var(--border);
+         border-radius: 10px; overflow: hidden; }
+
+  .box textarea, .overlay, .probe {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 20px; line-height: 32px; letter-spacing: 0; font-variant-ligatures: none;
+  }
+  .box textarea, .overlay {
+    box-sizing: border-box; width: 100%; margin: 0; border: 0;
+    white-space: break-spaces; word-break: break-all;      /* fill the full width, don't break at spaces */
+  }
+  .box textarea { padding: 16px 16px 56px 16px; }
+  .overlay { position: absolute; inset: 0; padding: 16px 0 56px 0; overflow: hidden;
+             pointer-events: none; user-select: none; }
+  .probe { position: absolute; left: 0; top: 0; visibility: hidden; white-space: pre; display: inline-block; }
+
+  textarea {
+    display: block; position: relative; z-index: 1; min-height: 60vh;
+    background: transparent; color: transparent; caret-color: var(--fg);
+    resize: none; outline: none; overflow: hidden;
+  }
+  textarea::placeholder { color: var(--ghost); opacity: 1; }
+  textarea::selection { background: rgba(100,150,255,.35); color: transparent; }
+
+  .line { position: relative; min-height: 32px; padding: 0 16px; }
+  .line:nth-child(even) { background: var(--band); }       /* subtle banding per Enter-line */
+  .res { color: var(--blue); }                              /* only the number, not the "=" */
+  .gh { position: absolute; line-height: 32px; white-space: pre; color: var(--ghost); }
+  .hint { margin-top: 10px; font-size: 12px; color: var(--ghost); width: min(760px,100%); }
+</style>
+</head>
+<body>
+  <h1>LIVE CALCULATOR</h1>
+
+  <div class="bar">
+    <label><input type="checkbox" id="commaToggle"> Commas in results</label>
+    <select id="commaStyle" disabled>
+      <option value="intl">1,234,567 (International)</option>
+      <option value="indian">12,34,567 (Indian)</option>
+      <option value="myriad">123,4567 (East Asian, 4-digit)</option>
+    </select>
+  </div>
+
+  <div class="box">
+    <span class="probe" id="probe">0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000</span>
+    <div class="overlay" id="overlay"></div>
+    <textarea id="input" spellcheck="false" autofocus
+      placeholder="Try: 3+ 5,  200 + 10%,  (4*5)/2,  5!,  1+1+1+1=  then  +5"></textarea>
+  </div>
+  <div class="hint">Operators: + - * × / ÷ ( ) % ! &nbsp;·&nbsp; Letters and commas are ignored (use them for comments). Type = to lock a result (blue) and keep calculating with it.</div>
+
+<script>
+/* ---------- Elements & settings ---------- */
+const input = document.getElementById('input');
+const overlay = document.getElementById('overlay');
+const probe = document.getElementById('probe');
+const commaToggle = document.getElementById('commaToggle');
+const commaStyle = document.getElementById('commaStyle');
+if (/-IN$/i.test(navigator.language || '')) commaStyle.value = 'indian';
+
+const LINE_H = 32, PAD = 16;
+
+function group(intPart, style) {
+  if (style === 'indian') {
+    if (intPart.length <= 3) return intPart;
+    return intPart.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + intPart.slice(-3);
+  }
+  if (style === 'myriad') return intPart.replace(/\B(?=(\d{4})+(?!\d))/g, ',');
+  return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function fmt(v) {
+  let s = String(v);
+  if (s.includes('e') || !commaToggle.checked) return s;
+  const neg = s[0] === '-';
+  if (neg) s = s.slice(1);
+  const [i, d] = s.split('.');
+  return (neg ? '-' : '') + group(i, commaStyle.value) + (d !== undefined ? '.' + d : '');
+}
+
+const roundVal = n => parseFloat(n.toPrecision(12));
+
+/* ---------- Tokenizer ---------- */
+function tokenize(s) {
+  s = s.replace(/,/g, '');                                   // commas ignored
+  s = s.replace(/[\p{L}:;$€£¥₹_#@"']/gu, ' ');               // letters & comment-ish symbols ignored
+  const tokens = [];
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (/\s/.test(c)) { i++; continue; }
+    const m = s.slice(i).match(/^(\d+\.?\d*|\.\d+)/);
+    if (m) {
+      const v = parseFloat(m[0]);
+      if (!isFinite(v)) throw new Error('too big');
+      tokens.push({ t: 'num', v }); i += m[0].length; continue;
+    }
+    if (c === '+') { tokens.push({ t: '+' }); i++; continue; }
+    if ('-−–'.includes(c)) { tokens.push({ t: '-' }); i++; continue; }
+    if ('*×'.includes(c)) { tokens.push({ t: '*' }); i++; continue; }
+    if ('/÷'.includes(c)) { tokens.push({ t: '/' }); i++; continue; }
+    if ('()%!'.includes(c)) { tokens.push({ t: c }); i++; continue; }
+    throw new Error('bad char');
+  }
+  return tokens;
+}
+
+/* Drop dangling operators / open brackets at the end, auto-close open brackets.
+   "39+1+" -> 39+1     "2*(3+" -> 2*(3) */
+function prep(tokens) {
+  const t = tokens.slice();
+  while (t.length && '+-*/('.includes(t[t.length - 1].t)) t.pop();
+  let depth = 0;
+  for (const x of t) {
+    if (x.t === '(') depth++;
+    else if (x.t === ')') { depth--; if (depth < 0) throw new Error('unbalanced'); }
+  }
+  while (depth-- > 0) t.push({ t: ')' });
+  return t;
+}
+
+/* ---------- Evaluator ----------
+   Relative percent: A + B% = A + A*B/100 (same for -). */
+const chk = x => { if (!isFinite(x)) throw new Error('overflow'); return x; };
+function factorial(n) { let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
+
+function evalTokens(tokens) {
+  if (!tokens.length) throw new Error('empty');
+  let p = 0;
+  const peek = () => (p < tokens.length ? tokens[p].t : null);
+  const val = x => (x.pct ? x.v / 100 : x.v);
+
+  function parseExpr() {
+    let result = val(parseTerm());
+    while (peek() === '+' || peek() === '-') {
+      const op = tokens[p++].t;
+      const right = parseTerm();
+      const r = right.pct ? chk(result * right.v / 100) : right.v;
+      result = chk(op === '+' ? result + r : result - r);
+    }
+    return result;
+  }
+  function parseTerm() {
+    const first = parseFactor();
+    if (peek() !== '*' && peek() !== '/') return first;
+    let result = val(first);
+    while (peek() === '*' || peek() === '/') {
+      const op = tokens[p++].t;
+      const right = val(parseFactor());
+      if (op === '*') result = chk(result * right);
+      else { if (right === 0) throw new Error('div0'); result = chk(result / right); }
+    }
+    return { v: result, pct: false };
+  }
+  function parseFactor() {
+    const t = peek();
+    if (t === '+' || t === '-') {
+      p++;
+      const inner = parseFactor();
+      return { v: t === '-' ? -inner.v : inner.v, pct: inner.pct };
+    }
+    let node;
+    if (t === 'num') node = { v: tokens[p++].v, pct: false };
+    else if (t === '(') {
+      p++;
+      const inner = parseExpr();
+      if (peek() !== ')') throw new Error('unclosed');
+      p++;
+      node = { v: inner, pct: false };
+    } else throw new Error('unexpected');
+    while (peek() === '%' || peek() === '!') {
+      const op = tokens[p++].t;
+      if (op === '%') {
+        if (node.pct) node.v = node.v / 100; else node.pct = true;
+      } else {
+        if (node.pct || !Number.isInteger(node.v) || node.v < 0 || node.v > 170) throw new Error('fact');
+        node = { v: factorial(node.v), pct: false };
+      }
+    }
+    return node;
+  }
+  const out = parseExpr();
+  if (p !== tokens.length) throw new Error('trailing');
+  return chk(out);
+}
+
+/* ---------- Line model ----------
+   A line is:  expr0 = R1 expr1 = R2 expr2 ...
+   R_k (the blue run after each "=") is app-managed and always equals the value
+   of everything before it. Segment k>0 continues from the previous value. */
+const RUN_RE = /^-?\d[\d,]*(?:\.\d+)?(?:e[+-]\d+)?/i;
+
+function analyzeLine(line) {
+  const pieces = line.split('=');
+  const n = pieces.length;
+
+  // Comment-only before the first "=" -> leave the line completely alone
+  let first;
+  try { first = tokenize(pieces[0]); } catch (e) { first = null; }
+  if (first && first.length === 0) {
+    return { text: line, parts: [{ text: line, cls: '' }], ghost: null, map: c => c };
+  }
+
+  const exprs = [], runsOld = [];
+  for (let k = 0; k < n; k++) {
+    if (k === 0) { exprs.push(pieces[0]); runsOld.push(''); }
+    else {
+      const m = pieces[k].match(RUN_RE);
+      const run = m ? m[0] : '';
+      runsOld.push(run);
+      exprs.push(pieces[k].slice(run.length));
+    }
+  }
+
+  const vals = [], ghostable = [];
+  let ok = true;
+  for (let j = 0; j < n; j++) {
+    let v = null, g = false;
+    if (ok) {
+      try {
+        const raw = tokenize(exprs[j]);
+        const own = prep(raw);
+        if (j === 0) { v = roundVal(evalTokens(own)); g = raw.length > 1; }
+        else if (own.length === 0) { v = vals[j - 1]; g = false; }
+        else { v = roundVal(evalTokens([{ t: 'num', v: vals[j - 1] }].concat(own))); g = true; }
+      } catch (e) { v = null; g = false; }
+    }
+    if (v === null) ok = false;
+    vals.push(v); ghostable.push(g);
+  }
+
+  let text = '';
+  const parts = [], ents = [];
+  let o = 0;
+  for (let j = 0; j < n; j++) {
+    if (j > 0) {
+      const runNew = vals[j - 1] !== null ? fmt(vals[j - 1]) : '';
+      const o0 = o + 1, o1 = o0 + runsOld[j].length;
+      text += '=' + runNew;
+      parts.push({ text: '=', cls: '' });
+      if (runNew) parts.push({ text: runNew, cls: 'res' });
+      ents.push({ k: 'run', o0, o1, n1: text.length });
+      o = o1;
+    }
+    const n0 = text.length;
+    text += exprs[j];
+    parts.push({ text: exprs[j], cls: '' });
+    ents.push({ k: 'expr', o0: o, o1: o + exprs[j].length, n0 });
+    o += exprs[j].length;
+  }
+
+  const L = n - 1;
+  const ghost = (vals[L] !== null && ghostable[L]) ? '=' + fmt(vals[L]) : null;
+
+  const map = c => {
+    for (const e of ents) {
+      if (e.k === 'run' && c >= e.o0 && c <= e.o1) return e.n1;
+      if (e.k === 'expr' && c >= e.o0 && c <= e.o1) return e.n0 + (c - e.o0);
+    }
+    return text.length;
+  };
+  return { text, parts, ghost, map };
+}
+
+/* ---------- Rendering ---------- */
+function metrics() {
+  const charW = probe.getBoundingClientRect().width / 100;
+  const cols = Math.max(1, Math.floor((input.clientWidth - 2 * PAD + 0.5) / charW));
+  return { charW, cols };
+}
+
+function renderOverlay(views) {
+  const { charW, cols } = metrics();
+  overlay.textContent = '';
+  views.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'line';
+    for (const part of r.parts) {
+      if (!part.text) continue;
+      const sp = document.createElement('span');
+      if (part.cls) sp.className = part.cls;
+      sp.textContent = part.text;
+      row.appendChild(sp);
+    }
+    if (r.ghost) {
+      const len = r.text.length;
+      const rows = len ? Math.ceil(len / cols) : 1;
+      const used = len ? len - (rows - 1) * cols : 0;
+      let col = null, rowIdx = 0;
+      if (used + 1 + r.ghost.length <= cols) { col = used + 1; rowIdx = rows - 1; }   // fits on same row
+      else {
+        const next = views[i + 1];
+        if (!next || next.text.trim() === '') { col = 0; rowIdx = rows; }             // drop to next (empty) row
+        /* else: no room and next row is occupied -> hide rather than overlap */
+      }
+      if (col !== null) {
+        const g = document.createElement('span');
+        g.className = 'gh';
+        g.textContent = r.ghost;
+        g.style.top = (rowIdx * LINE_H) + 'px';
+        g.style.left = (PAD + col * charW) + 'px';
+        row.appendChild(g);
+      }
+    }
+    overlay.appendChild(row);
+  });
+}
+
+function autoGrow() {
+  input.style.height = '0px';
+  input.style.height = input.scrollHeight + 'px';
+}
+
+function process() {
+  const text = input.value;
+  const s0 = input.selectionStart, e0 = input.selectionEnd;
+  const out = [], views = [];
+  let oOff = 0, nOff = 0, ns = null, ne = null;
+  for (const line of text.split('\n')) {
+    const r = analyzeLine(line);
+    if (ns === null && s0 >= oOff && s0 <= oOff + line.length) ns = nOff + r.map(s0 - oOff);
+    if (ne === null && e0 >= oOff && e0 <= oOff + line.length) ne = nOff + r.map(e0 - oOff);
+    out.push(r.text); views.push(r);
+    oOff += line.length + 1;
+    nOff += r.text.length + 1;
+  }
+  const newText = out.join('\n');
+  if (newText !== text) {
+    input.value = newText;
+    input.setSelectionRange(ns ?? newText.length, ne ?? newText.length);
+  }
+  autoGrow();
+  renderOverlay(views);
+}
+
+/* Absolute positions of every "=" + its managed result run (managed lines only) */
+function findRuns(text) {
+  const runs = [];
+  let off = 0;
+  for (const line of text.split('\n')) {
+    let first;
+    try { first = tokenize(line.split('=')[0]); } catch (e) { first = null; }
+    if (!(first && first.length === 0)) {
+      const pieces = line.split('=');
+      let pos = off + pieces[0].length;
+      for (let k = 1; k < pieces.length; k++) {
+        const eq = pos, rs = pos + 1;
+        const m = pieces[k].match(RUN_RE);
+        runs.push({ eq, rs, re: rs + (m ? m[0].length : 0) });
+        pos = rs + pieces[k].length;
+      }
+    }
+    off += line.length + 1;
+  }
+  return runs;
+}
+
+/* "=" + result behave as one unit when deleting; typing starts after the result */
+input.addEventListener('beforeinput', e => {
+  const t = e.inputType || '';
+  const runs = findRuns(input.value);
+  if (!runs.length) return;
+  const s = input.selectionStart, en = input.selectionEnd;
+
+  if (t === 'deleteContentBackward' || t === 'deleteContentForward') {
+    let a = s, b = en;
+    if (a === b) {
+      if (t === 'deleteContentBackward') a = Math.max(0, a - 1);
+      else b = Math.min(input.value.length, b + 1);
+    }
+    let a2 = a, b2 = b;
+    for (const r of runs) {
+      if (a < r.re && b > r.eq) { a2 = Math.min(a2, r.eq); b2 = Math.max(b2, r.re); }
+    }
+    if (a2 !== a || b2 !== b) {
+      e.preventDefault();
+      input.setRangeText('', a2, b2, 'end');
+      process();
+    }
+    return;
+  }
+
+  if (t.startsWith('insert') && s === en) {
+    for (const r of runs) {
+      if (s > r.eq && s <= r.re && r.re > r.rs) {
+        if (s < r.re) input.setSelectionRange(r.re, r.re);
+        if (t === 'insertText' && /^[\d.,]+$/.test(e.data || '')) e.preventDefault();
+        break;
+      }
+    }
+  }
+});
+
+input.addEventListener('input', process);
+commaToggle.addEventListener('change', () => { commaStyle.disabled = !commaToggle.checked; process(); });
+commaStyle.addEventListener('change', process);
+window.addEventListener('resize', process);
+process();
+</script>
+</body>
+</html>  
