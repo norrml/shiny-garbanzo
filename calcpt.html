@@ -50,8 +50,9 @@
   .gh { position: absolute; line-height: 32px; white-space: pre; color: var(--ghost); }
 
   .summary { width: min(760px,100%); margin-top: 22px; font-size: 13.5px; line-height: 1.55; }
-  .summary h2 { font-size: 14px; margin: 0 0 8px; }
-  .summary ul { margin: 0; padding-left: 20px; }
+  .summary > summary { cursor: pointer; user-select: none; color: var(--ghost); font-size: 13px; }
+  .summary > summary:hover { color: var(--fg); }
+  .summary ul { margin: 10px 0 0; padding-left: 20px; }
   .summary li { margin-bottom: 5px; }
   .summary code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--band);
                   padding: 1px 5px; border-radius: 4px; }
@@ -83,20 +84,20 @@
       placeholder="Try:  3+ 5   |   200 + 10%   |   v=1.5 then 2v   |   5!   |   1+1+1+1 [Tab] then +5"></textarea>
   </div>
 
-  <div class="summary">
-    <h2>What this calculator does</h2>
+  <details class="summary">
+    <summary>Calculator instructions (click to expand)</summary>
     <ul>
       <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each newline is its own row, and rows are shaded alternately so you can tell them apart. Long lines use the full box width before wrapping.</li>
       <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>×</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code> <code>!</code> (factorial, whole numbers 0 to 170). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
       <li><b>Unfinished input.</b> <code>39+1+</code> still shows <span class="g">=40</span>, and open brackets are closed for you.</li>
-      <li><b>Locking a result.</b> Type <code>=</code> or press <code>Tab</code> or <code>Enter</code> and the answer turns <span class="b">blue</span>. Keep typing an operator after it to continue from that number. Edit anything earlier on the line and the blue numbers update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a blue result, so use an operator.</li>
+      <li><b>Locking a result.</b> Type <code>=</code> or press <code>Tab</code> and the answer turns <span class="b">blue</span>. Keep typing an operator after it to continue from that number. Edit anything earlier on the line and the blue numbers update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a blue result, so use an operator.</li>
       <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>. Names are letters only and not case-sensitive. Several can share a line: <code>v=10, inch=25, x=100</code>. Use them anywhere in the document: <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5. The latest definition wins everywhere, regardless of where it appears. A definition must come before any numbers or operators on its line.</li>
       <li><b>Comments are ignored.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. <code>x</code> is not multiplication; use <code>*</code> or <code>×</code>.</li>
       <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each blue result carries forward exactly as shown.</li>
       <li><b>Commas in results.</b> Off by default. Choose International (1,234,567), Indian (12,34,567) or East Asian (123,4567).</li>
       <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials and malformed lines show no result, so you never see a wrong number.</li>
     </ul>
-  </div>
+  </details>
 
 <script>
 /* ---------- Elements & settings ---------- */
@@ -495,12 +496,25 @@ function insertEq() {
   process();
 }
 
-/* Tab and Enter = "=" (Shift+Tab still moves focus away).
-   Enter inserts the lock marker instead of creating a new line. */
+/* Tab locks a result. Enter completes a calculation and starts a new line.
+   On text/comment-only lines, Enter simply creates a new line. */
 input.addEventListener('keydown', e => {
-  if ((e.key === 'Tab' || e.key === 'Enter') && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+  if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
     e.preventDefault();
     insertEq();
+    return;
+  }
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    const caret = input.selectionStart;
+    const lineStart = input.value.lastIndexOf('\n', Math.max(0, caret - 1)) + 1;
+    const lineEndRaw = input.value.indexOf('\n', caret);
+    const lineEnd = lineEndRaw < 0 ? input.value.length : lineEndRaw;
+    const currentLine = input.value.slice(lineStart, lineEnd);
+    if (/[0-9()+\-*\/×÷%!]/.test(currentLine)) insertEq();
+    const at = input.selectionStart;
+    input.setRangeText('\n', at, input.selectionEnd, 'end');
+    process();
   }
 });
 
@@ -513,7 +527,7 @@ input.addEventListener('beforeinput', e => {
     const locked = lastRuns.find(r => caret >= r.rs && caret <= r.re);
     if (locked) {
       e.preventDefault();
-      input.setRangeText('\\n', caret, caret, 'end');
+      input.setRangeText('\n', caret, caret, 'end');
       process();
       return;
     }
