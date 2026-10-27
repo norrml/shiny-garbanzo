@@ -5,20 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calculiner</title>
 <style>
-  :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --border:#d4d4d4; --blue:#2563eb; --red:#dc2626; --band:rgba(0,0,0,.035); }
+  :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --comment:#b4b4b4; --border:#d4d4d4; --blue:#2563eb; --red:#dc2626; --green:#16a34a; --band:rgba(0,0,0,.035); }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#1b1b1b; --fg:#eaeaea; --ghost:#777; --border:#3a3a3a; --blue:#5b9dff; --red:#ff6b6b; --band:rgba(255,255,255,.04); }
+    :root { --bg:#1b1b1b; --fg:#eaeaea; --ghost:#777; --comment:#6a6a6a; --border:#3a3a3a; --blue:#5b9dff; --red:#ff6b6b; --green:#4ade80; --band:rgba(255,255,255,.04); }
   }
   body {
     background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif;
     margin: 0; padding: 28px 16px 48px; display: flex; flex-direction: column; align-items: center;
   }
+  body.popup { padding: 12px 10px 28px; }
   h1 { font-size: 14px; font-weight: 500; color: var(--ghost); margin: 0 0 12px; letter-spacing: .04em; }
-  .bar { width: min(760px,100%); display: flex; gap: 14px; align-items: center;
+  .bar { width: min(760px,100%); display: flex; gap: 10px 14px; align-items: center;
          margin-bottom: 10px; font-size: 13px; color: var(--ghost); flex-wrap: wrap; }
-  .bar select { font: inherit; background: var(--bg); color: var(--fg);
-                border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
+  .bar select, .bar button { font: inherit; background: var(--bg); color: var(--fg);
+                border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
+  .bar button { cursor: pointer; }
   .bar select:disabled { opacity: .45; }
+  .bar .today { margin-left: auto; color: var(--green); }
+  .bar .saved { font-size: 12px; }
+  .bar .saved.err { color: var(--red); }
+  .notice { width: min(760px,100%); box-sizing: border-box; margin-bottom: 10px; padding: 8px 12px;
+            border: 1px solid var(--green); border-radius: 8px; font-size: 13px;
+            display: none; align-items: center; justify-content: space-between; gap: 10px; }
+  .notice.show { display: flex; }
+  .notice button { font: inherit; background: none; border: 1px solid var(--border); color: var(--fg);
+                   border-radius: 6px; padding: 2px 8px; cursor: pointer; }
   .box { position: relative; width: min(760px,100%); border: 1px solid var(--border);
          border-radius: 10px; overflow: hidden; }
 
@@ -47,6 +58,8 @@
   .line:nth-child(even) { background: var(--band); }
   .res { color: var(--blue); }
   .def { color: var(--red); }
+  .dt  { color: var(--green); }
+  .cm  { color: var(--comment); }
   .gh { position: absolute; line-height: 32px; white-space: pre; color: var(--ghost); }
 
   .vars { width: min(760px,100%); margin-top: 10px; font-size: 13px; color: var(--ghost);
@@ -56,7 +69,7 @@
   .chip .nm { color: var(--red); }
   .chip.dup { border-color: var(--red); }
   .chip small { color: var(--red); margin-left: 6px; font-family: system-ui, sans-serif; }
-  .chip.ign { opacity: .55; }
+  .chip.ign { opacity: .6; }
 
   details.summary { width: min(760px,100%); margin-top: 18px; font-size: 13.5px; line-height: 1.55;
                     border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; }
@@ -65,7 +78,9 @@
   details.summary li { margin-bottom: 5px; }
   .summary code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--band);
                   padding: 1px 5px; border-radius: 4px; }
-  .summary .r { color: var(--red); } .summary .b { color: var(--blue); } .summary .g { color: var(--ghost); }
+  .summary .r { color: var(--red); } .summary .b { color: var(--blue); }
+  .summary .g { color: var(--ghost); } .summary .gr { color: var(--green); } .summary .c { color: var(--comment); }
+  #resList { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--ghost); }
 </style>
 </head>
 <body>
@@ -84,13 +99,20 @@
         <option>3</option><option>4</option><option>5</option>
       </select>
     </label>
+    <label><input type="checkbox" id="factToggle"> Factorials (!)</label>
+    <button id="popBtn" type="button">Open in popup</button>
+    <button id="clearBtn" type="button">Clear</button>
+    <span class="saved" id="saveLbl"></span>
+    <span class="today" id="todayLbl"></span>
   </div>
+
+  <div class="notice" id="dayNotice"></div>
 
   <div class="box">
     <span class="probe" id="probe"></span>
     <div class="overlay" id="overlay"></div>
     <textarea id="input" spellcheck="false" autofocus
-      placeholder="Try:  3+ 5   |   200 + 10%   |   v=1.5 then 2v   |   5!   |   today + 2 weeks   |   26 oct + 10 days"></textarea>
+      placeholder="Try:  3+ 5  ·  200 + 10%  ·  v=1.5 then 2v  ·  today + 2 weeks  ·  3+4 ; 5*2  ·  # a comment line"></textarea>
   </div>
 
   <div class="vars" id="vars"></div>
@@ -98,22 +120,31 @@
   <details class="summary" id="help" open>
     <summary>What Calculiner does (click to fold)</summary>
     <ul>
-      <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately so you can tell them apart. Long lines use the full box width before wrapping.</li>
-      <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>×</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code> <code>!</code> (factorial, whole numbers 0 to 170). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
-      <li><b>Dates.</b> Use <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, or a date written with a month name: <code>26 oct</code>, <code>26 oct 2026</code>, <code>oct 26</code>, <code>26th October</code> (no year = this year). Add or subtract whole <b>days, weeks, months, years</b>: <code>today + 2 weeks</code>, <code>tomorrow - 3 days</code>, <code>today + 1 month</code>, <code>26 oct + 1 month + 2 days</code>. Results show the weekday (<span class="g">=Mon, 9 Nov 2026</span>). Two dates subtracted give the days between: <code>25 dec - today</code> = 60 days. Month maths stops at month end (31 Jan + 1 month = 28 Feb). Numeric dates like 26/10/2026 are not supported. Results using today/tomorrow/yesterday change when the day changes. Dates can't be stored in variables.</li>
+      <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately. Long lines use the full box width before wrapping.</li>
+      <li><b>Colours.</b> <span class="gr">Green</span> = a date word or date result the app recognised. <span class="b">Blue</span> = a locked number result. <span class="r">Red</span> = a variable (its definition and wherever you use it). <span class="g">Grey</span> = live results, suggestions and notes. <span class="c">Light grey</span> = text the app detected and ignored (comments).</li>
+      <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code>. Multiplication is <code>*</code> only (the × sign is not supported). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
+      <li><b>Factorials.</b> Off by default. Tick "Factorials (!)" to allow <code>5!</code> (whole numbers 0 to 170). While off, a line containing <code>5!</code> shows no result and a grey note explains why. Factorials work with separators, locking and variables like any other calculation.</li>
+      <li><b>Several calculations on one line.</b> A <code>;</code> anywhere starts a new, independent calculation, and typing it locks the result before it: <code>3+4;5*2</code> becomes <code>3+4=7;5*2</code> with a grey result for the last one. A <b>space after a locked result</b> also starts a new calculation: <code>3+4=7 5*2</code>. A space after a result followed by an operator is still a chain (<code>=7 +5</code>); to start a calculation with a minus sign, use <code>;</code>. A space is only a separator after a locked result; <code>5 6</code> is not two calculations. Only the last calculation on a line shows a live grey result. You can define variables after a <code>;</code>: <code>3+4; v=5</code>.</li>
+      <li><b>Comments.</b> Words the app ignores (like <code>rent</code> in <code>rent 500 + 200</code>), words with digits in them (<code>v99t</code>), and ignored variable names turn <span class="c">light grey</span>. A line starting with <code>#</code> is ignored completely. A <code>#</code> in the middle of a line is just ignored punctuation.</li>
+      <li><b>Dates.</b> Use <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekday names, or a date with a month name: <code>26 oct</code>, <code>26 oct 2026</code>, <code>oct 26</code>, <code>26th October</code> (no year = this year). Weekdays: <code>friday</code> = the first Friday after today; <code>next friday</code> = Friday of <i>next week</i> (weeks run Monday to Sunday); <code>last friday</code> = the most recent Friday before today. Add or subtract whole <b>days, weeks, months, years</b>: <code>today + 2 weeks</code>, <code>tomorrow - 3 days</code>, <code>next friday + 1 month</code>. Two dates subtracted give the days between. A weekday written next to a full date (<code>Fri 6 Nov</code>) is just a label. Month maths stops at month end (31 Jan + 1 month = 28 Feb). Numeric dates like 26/10/2026 are not supported. Dates can't be stored in variables.</li>
+      <li><b>Leaving the page open.</b> The app checks the date every 30 seconds, and when you return to the tab. If the day changes, results that use today, tomorrow, yesterday or weekday names are recalculated automatically (locked ones too) and a banner tells you. Dates you typed out in full never change. The toolbar shows the date the app is using.</li>
+      <li><b>Autocomplete.</b> When you type 2+ letters at the end of a line, the rest appears in grey: <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekdays, months, and <b>your own variable names</b> (date words are checked first). Press <code>Tab</code> or <code>→</code> to accept. After a number it suggests <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code> instead (<code>mo</code> becomes months, not Monday). After a locked result and a space, you're starting a new calculation, so normal suggestions apply. While a suggestion shows, the result on that line is hidden and Enter makes a plain new line.</li>
       <li><b>Unfinished input.</b> <code>39+1+</code> still shows <span class="g">=40</span>, and open brackets are closed for you.</li>
-      <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code>, or press <code>Enter</code>. The answer turns <span class="b">blue</span>. Enter also starts a new line, but only if the line has something to calculate (text-only lines just get a new line). <code>Shift+Enter</code> always gives a plain new line. Keep typing an operator after a blue result to continue from that number or date (e.g. <code>today=</code> then <code>+ 3 days</code>). Edit anything earlier on the line and the blue results update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a blue result, so use an operator.</li>
-      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 ; rr=2 ; dd=4</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3) and <code>1+v</code> = 2.5. They also work with dates: <code>n=3</code> then <code>today + n days</code>. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come before any numbers or operators on its line.</li>
-      <li><b>Variable list.</b> Every detected variable and its value is shown under the box. A name defined more than once is flagged in red with the line that wins. Ignored names (those with digits) appear dimmed.</li>
-      <li><b>Comments are ignored.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable, and a month word next to a number (e.g. <code>mar 5</code>) is read as a date. <code>x</code> is not multiplication; use <code>*</code> or <code>×</code>.</li>
-      <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each blue result carries forward exactly as shown.</li>
+      <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code> (when no suggestion is showing), or press <code>Enter</code>. The answer turns blue (or green for dates). Enter also starts a new line, but only if the line has something to calculate. <code>Shift+Enter</code> always gives a plain new line. <code>=</code> and <code>Tab</code> are ignored when there is nothing new to lock (right after a result, on an empty line, or right after <code>;</code>), so you can't duplicate a result. Keep typing an operator after a locked result to continue from it (<code>today=</code> then <code>+ 3 days</code>). Edit anything earlier and the locked results update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a locked result; type a space or an operator first.</li>
+      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>; later uses of the name are red too. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 rr=2 dd=4</code> or <code>v=1 ; rr=2</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5, and <code>today + n days</code> works. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come first in its line or after a <code>;</code>.</li>
+      <li><b>Reserved words can't be variables.</b> A variable with one of these names is ignored: a grey note appears on the line and it shows dimmed in the variable list. (Typing <code>today=</code> or <code>sun=</code> locks the date instead, since <code>=</code> means lock.) Reserved: <span id="resList"></span></li>
+      <li><b>Variable list.</b> Every detected variable and its value is shown under the box. A name defined more than once is flagged in red with the line that wins. Ignored names appear dimmed.</li>
+      <li><b>Saving.</b> Everything you type and your settings are saved automatically in this browser (the toolbar shows when). It is <b>not a backup</b>: clearing browser data, a private window, or moving the file (in some browsers) loses it. <code>Clear</code> deletes the sheet and its saved copy after asking.</li>
+      <li><b>Popup window.</b> "Open in popup" opens Calculiner in its own small window. It can't stay on top of other windows (browsers don't allow that). The popup and the main window share the same saved sheet and stay in sync; type in one at a time.</li>
+      <li><b>Comments in calculations.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. A weekday word (<code>sat</code>, <code>sun</code>, <code>wed</code>, <code>mon</code> ...) anywhere is read as a date, and a month word next to a day number (<code>mar 5</code>) is too. A 4-digit number right after a day and month is read as the year.</li>
+      <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each locked result carries forward exactly as shown.</li>
       <li><b>Commas in results.</b> Off by default. Choose International (1,234,567), Indian (12,34,567) or East Asian (123,4567).</li>
       <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials, impossible dates (31 Feb) and malformed lines show no result, so you never see a wrong number.</li>
     </ul>
   </details>
 
 <script>
-/* ---------- Elements & settings ---------- */
+/* ---------- Elements ---------- */
 const input = document.getElementById('input');
 const overlay = document.getElementById('overlay');
 const probe = document.getElementById('probe');
@@ -122,18 +153,92 @@ const help = document.getElementById('help');
 const commaToggle = document.getElementById('commaToggle');
 const commaStyle = document.getElementById('commaStyle');
 const decSel = document.getElementById('decSel');
+const factToggle = document.getElementById('factToggle');
+const todayLbl = document.getElementById('todayLbl');
+const dayNotice = document.getElementById('dayNotice');
+const popBtn = document.getElementById('popBtn');
+const clearBtn = document.getElementById('clearBtn');
+const saveLbl = document.getElementById('saveLbl');
 probe.textContent = '0'.repeat(100);
-if (/-IN$/i.test(navigator.language || '')) commaStyle.value = 'indian';
+const factOn = () => factToggle.checked;
 
-/* Remember whether the instructions are folded */
+const isPopup = location.hash === '#popup';
+if (isPopup) {
+  popBtn.style.display = 'none';
+  document.body.classList.add('popup');
+  document.title = 'Calculiner (popup)';
+}
+
+/* ---------- Saving (autosave to this browser) ---------- */
+const TEXT_KEY = 'calculiner.text';
+const SET_KEY = 'calculiner.settings';
+let storageOk = true;
+let lastSaved = '';
+let saveTimer = null;
+
+function applySettings(s) {
+  if (!s || typeof s !== 'object') return;
+  commaToggle.checked = !!s.comma;
+  if (['intl', 'indian', 'myriad'].includes(s.style)) commaStyle.value = s.style;
+  if (['0', '1', '2', '3', '4', '5'].includes(String(s.dec))) decSel.value = String(s.dec);
+  factToggle.checked = !!s.fact;
+  commaStyle.disabled = !commaToggle.checked;
+}
+function saveSettings() {
+  try {
+    localStorage.setItem(SET_KEY, JSON.stringify({
+      comma: commaToggle.checked, style: commaStyle.value, dec: decSel.value, fact: factToggle.checked
+    }));
+  } catch (e) { storageOk = false; showSave(); }
+}
+function showSave(ok) {
+  if (!storageOk) {
+    saveLbl.textContent = 'Autosave unavailable (browser blocked storage)';
+    saveLbl.className = 'saved err';
+    return;
+  }
+  saveLbl.className = 'saved';
+  saveLbl.textContent = 'Saved ' + new Date().toLocaleTimeString();
+}
+function doSave() {
+  saveTimer = null;
+  if (input.value === lastSaved) return;
+  try {
+    localStorage.setItem(TEXT_KEY, input.value);
+    lastSaved = input.value;
+    showSave();
+  } catch (e) { storageOk = false; showSave(); }
+}
+function scheduleSave() {
+  if (!storageOk) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 500);
+}
+
+(function loadSaved() {
+  let hasSettings = false;
+  try {
+    const t = localStorage.getItem(TEXT_KEY);
+    if (t !== null) { input.value = t; lastSaved = t; }
+    const raw = localStorage.getItem(SET_KEY);
+    if (raw) { applySettings(JSON.parse(raw)); hasSettings = true; }
+  } catch (e) { storageOk = false; }
+  if (!hasSettings && /-IN$/i.test(navigator.language || '')) commaStyle.value = 'indian';
+})();
+
 try { if (localStorage.getItem('calculiner.help') === 'closed') help.open = false; } catch (e) {}
 help.addEventListener('toggle', () => {
   try { localStorage.setItem('calculiner.help', help.open ? 'open' : 'closed'); } catch (e) {}
 });
 
 const LINE_H = 32, PAD = 16;
-let lastRuns = [];     // absolute positions of every "=" + its managed blue result
-let lastViews = [];    // per-line analysis of the current text
+let lastRuns = [];      // absolute positions of every "=" + its managed result
+let lastViews = [];     // per-line analysis of the current text
+let currentSug = null;  // active autocomplete suggestion
+let focused = false;
+let knownVars = [];     // variable names currently defined (for autocomplete)
+let relUsed = false;    // did this pass use today/tomorrow/yesterday/weekday words?
+let lastRelUsed = false;
 
 function group(intPart, style) {
   if (style === 'indian') {
@@ -165,7 +270,7 @@ function roundDec(n) {
   return r === 0 ? 0 : r;
 }
 
-/* ---------- Date helpers (all dates are whole UTC day numbers) ---------- */
+/* ---------- Word tables ---------- */
 const WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTHS = new Map(Object.entries({
@@ -173,19 +278,29 @@ const MONTHS = new Map(Object.entries({
   jun:5, june:5, jul:6, july:6, aug:7, august:7, sep:8, sept:8, september:8,
   oct:9, october:9, nov:10, november:10, dec:11, december:11
 }));
+const WEEKDAYS = new Map(Object.entries({
+  sun:0, sunday:0, mon:1, monday:1, tue:2, tues:2, tuesday:2, wed:3, wednesday:3,
+  thu:4, thur:4, thurs:4, thursday:4, fri:5, friday:5, sat:6, saturday:6
+}));
 const UNITS = new Map(Object.entries({
   day:'d', days:'d', week:'w', weeks:'w', wk:'w', wks:'w',
   month:'m', months:'m', year:'y', years:'y', yr:'y', yrs:'y'
 }));
-const RESERVED = new Set(['today', 'tomorrow', 'yesterday']);
+const RELATIVE = new Map([['today', 0], ['tomorrow', 1], ['yesterday', -1]]);
 const ORD = new Set(['st', 'nd', 'rd', 'th']);
+const RESERVED = new Set([
+  ...RELATIVE.keys(), 'tod', 'tom', 'next', 'last',
+  ...WEEKDAYS.keys(), ...MONTHS.keys(), ...UNITS.keys(), ...ORD
+]);
+document.getElementById('resList').textContent = [...RESERVED].sort().join(', ');
 
+/* ---------- Date helpers (dates are whole UTC day numbers) ---------- */
 function todayDay() {
   const n = new Date();
   return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / 86400000;
 }
 function thisYear() { return new Date().getFullYear(); }
-
+function dow(day) { return new Date(day * 86400000).getUTCDay(); }
 function mkDate(y, m, d) {
   const ms = Date.UTC(y, m, d);
   const dt = new Date(ms);
@@ -215,6 +330,18 @@ function addDur(day, n, unit) {
   if (!(y >= 1000 && y <= 9999)) throw new Error('range');
   return r;
 }
+/* mode 'first': first such weekday after today (7 days ahead if today is that weekday).
+   mode 'next' : that weekday in the NEXT Monday-to-Sunday week.
+   mode 'last' : most recent such weekday before today. */
+function weekdayDate(wd, mode) {
+  const t = todayDay(), w = dow(t);
+  if (mode === 'next') {
+    const monThisWeek = t - ((w + 6) % 7);
+    return monThisWeek + 7 + ((wd + 6) % 7);
+  }
+  if (mode === 'last') return t - (((w - wd + 7) % 7) || 7);
+  return t + (((wd - w + 7) % 7) || 7);
+}
 function fmtDate(day) {
   const d = new Date(day * 86400000);
   return WD[d.getUTCDay()] + ', ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
@@ -226,103 +353,154 @@ function fmtVal(x) {
 }
 
 /* ---------- Tokenizer ----------
-   Numbers, operators and letter-only words. Words containing digits (v99t) are
-   comments. Commas and any other punctuation are ignored. */
+   Numbers, operators, letter-only words, and "junk" (words containing digits, e.g. v99t).
+   Commas and other punctuation (including ×) are ignored. Every token remembers its
+   start/end offsets in the original text so words can be coloured. */
 function tokenize(s) {
-  s = s.replace(/,/g, '');
+  let str = '';
+  const map = [];
+  for (let k = 0; k < s.length; k++) {
+    if (s[k] === ',') continue;
+    str += s[k];
+    map.push(k);
+  }
   const tokens = [];
+  const add = (tok, a, b) => { tok.s = map[a]; tok.e = map[b - 1] + 1; tokens.push(tok); };
   let i = 0;
-  while (i < s.length) {
-    const c = s[i];
+  while (i < str.length) {
+    const c = str[i];
     if (/\s/.test(c)) { i++; continue; }
-    const rest = s.slice(i);
+    const rest = str.slice(i);
     let m = rest.match(/^(\d+\.?\d*|\.\d+)/);
     if (m) {
       const v = parseFloat(m[0]);
       if (!isFinite(v)) throw new Error('too big');
-      tokens.push({ t: 'num', v }); i += m[0].length; continue;
+      add({ t: 'num', v }, i, i + m[0].length); i += m[0].length; continue;
     }
     m = rest.match(/^\p{L}[\p{L}\d]*/u);
     if (m) {
-      if (!/\d/.test(m[0])) tokens.push({ t: 'word', name: m[0].toLowerCase() });
+      if (/\d/.test(m[0])) add({ t: 'junk' }, i, i + m[0].length);
+      else add({ t: 'word', name: m[0].toLowerCase() }, i, i + m[0].length);
       i += m[0].length; continue;
     }
-    if (c === '+') { tokens.push({ t: '+' }); i++; continue; }
-    if ('-−–'.includes(c)) { tokens.push({ t: '-' }); i++; continue; }
-    if ('*×'.includes(c)) { tokens.push({ t: '*' }); i++; continue; }
-    if ('/÷'.includes(c)) { tokens.push({ t: '/' }); i++; continue; }
-    if ('()%!'.includes(c)) { tokens.push({ t: c }); i++; continue; }
+    if (c === '+') { add({ t: '+' }, i, i + 1); i++; continue; }
+    if ('-−–'.includes(c)) { add({ t: '-' }, i, i + 1); i++; continue; }
+    if (c === '*') { add({ t: '*' }, i, i + 1); i++; continue; }
+    if ('/÷'.includes(c)) { add({ t: '/' }, i, i + 1); i++; continue; }
+    if ('()%!'.includes(c)) { add({ t: c }, i, i + 1); i++; continue; }
     i++;
   }
   return tokens;
 }
 
-/* Turn "today", "26 oct", "oct 26 2026", "26th October" into date tokens.
-   Defined variables win over month words. Impossible dates become a "bad" token. */
-function groupDates(tokens, env) {
-  const out = [];
+/* Turn today/tomorrow/yesterday, weekdays ("next friday"), and "26 oct [2026]" /
+   "oct 26 [2026]" / "26th October" into single date tokens. Reserved words can
+   never be variables, so no variable check is needed here. */
+function groupDates(tokens) {
   const isDay = t => t && t.t === 'num' && Number.isInteger(t.v) && t.v >= 1 && t.v <= 31;
   const isYear = t => t && t.t === 'num' && Number.isInteger(t.v) && t.v >= 1000 && t.v <= 9999;
-  const isMonth = t => t && t.t === 'word' && MONTHS.has(t.name) && !env.has(t.name);
-  const isOrd = t => t && t.t === 'word' && ORD.has(t.name) && !env.has(t.name);
-  const make = (y, m, d) => { const v = mkDate(y, m, d); return v === null ? { t: 'bad' } : { t: 'date', v }; };
-
-  let i = 0;
-  while (i < tokens.length) {
+  const isMonth = t => t && t.t === 'word' && MONTHS.has(t.name);
+  const isOrd = t => t && t.t === 'word' && ORD.has(t.name);
+  const isWD = t => t && t.t === 'word' && WEEKDAYS.has(t.name);
+  const make = (y, m, d, s, e) => {
+    const v = mkDate(y, m, d);
+    return v === null ? { t: 'bad', s, e } : { t: 'date', v, s, e };
+  };
+  function tryDate(i) {
     const t = tokens[i];
-    if (t.t === 'word' && RESERVED.has(t.name)) {
-      const off = t.name === 'today' ? 0 : t.name === 'tomorrow' ? 1 : -1;
-      out.push({ t: 'date', v: todayDay() + off });
-      i++; continue;
-    }
-    if (isDay(t)) {                                   // 26 oct [2026]
+    if (!t) return null;
+    if (isDay(t)) {                                   // 26 [th] oct [2026]
       let j = i + 1;
       if (isOrd(tokens[j])) j++;
       if (isMonth(tokens[j])) {
-        const m = MONTHS.get(tokens[j].name); j++;
+        const m = MONTHS.get(tokens[j].name);
+        let e = tokens[j].e; j++;
         let y = thisYear();
-        if (isYear(tokens[j])) { y = tokens[j].v; j++; }
-        out.push(make(y, m, t.v)); i = j; continue;
+        if (isYear(tokens[j])) { y = tokens[j].v; e = tokens[j].e; j++; }
+        return { tok: make(y, m, t.v, t.s, e), next: j };
       }
     }
-    if (isMonth(t) && isDay(tokens[i + 1])) {         // oct 26 [2026]
+    if (isMonth(t) && isDay(tokens[i + 1])) {         // oct 26 [th] [2026]
       const m = MONTHS.get(t.name), d = tokens[i + 1].v;
-      let j = i + 2;
-      if (isOrd(tokens[j])) j++;
+      let e = tokens[i + 1].e, j = i + 2;
+      if (isOrd(tokens[j])) { e = tokens[j].e; j++; }
       let y = thisYear();
-      if (isYear(tokens[j])) { y = tokens[j].v; j++; }
-      out.push(make(y, m, d)); i = j; continue;
+      if (isYear(tokens[j])) { y = tokens[j].v; e = tokens[j].e; j++; }
+      return { tok: make(y, m, d, t.s, e), next: j };
+    }
+    return null;
+  }
+
+  const out = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t.t === 'word') {
+      if (RELATIVE.has(t.name)) {
+        relUsed = true;
+        out.push({ t: 'date', v: todayDay() + RELATIVE.get(t.name), s: t.s, e: t.e });
+        i++; continue;
+      }
+      if ((t.name === 'next' || t.name === 'last') && isWD(tokens[i + 1])) {
+        relUsed = true;
+        const w = tokens[i + 1];
+        out.push({ t: 'date', v: weekdayDate(WEEKDAYS.get(w.name), t.name), s: t.s, e: w.e });
+        i += 2; continue;
+      }
+      if (isWD(t)) {
+        const g = tryDate(i + 1);                     // "Fri 6 Nov": weekday is only a label
+        if (g) { out.push(Object.assign({}, g.tok, { s: t.s })); i = g.next; continue; }
+        relUsed = true;
+        out.push({ t: 'date', v: weekdayDate(WEEKDAYS.get(t.name), 'first'), s: t.s, e: t.e });
+        i++; continue;
+      }
+    }
+    const g = tryDate(i);
+    if (g) {
+      let tok = g.tok, next = g.next;
+      if (isWD(tokens[next])) { tok = Object.assign({}, tok, { e: tokens[next].e }); next++; }   // "6 Nov Fri"
+      out.push(tok); i = next; continue;
     }
     out.push(t); i++;
   }
   return out;
 }
 
-/* Words -> variable values (with implicit multiply). In date mode a unit word right
-   after a number becomes a unit token. Everything else unknown is dropped as a comment.
-   "seeded" = the line continues from a previous blue result, so "8v" multiplies. */
-function resolve(tokens, env, seeded, dateMode) {
+/* Words -> variable values (implicit multiply) or unit tokens (date mode only).
+   Everything else is dropped as a comment and recorded in `dropped` (shown light grey).
+   "seeded" = line continues from a previous locked result, so "8v" multiplies. */
+function resolve(tokens, env, seeded, dateMode, dropped) {
   const out = [];
   for (const t of tokens) {
+    if (t.t === 'junk') { dropped.push({ s: t.s, e: t.e }); continue; }
     if (t.t !== 'word') { out.push(t); continue; }
     if (env.has(t.name)) {
       const prev = out.length ? out[out.length - 1] : (seeded ? { t: 'num' } : null);
       if (prev && (prev.t === 'num' || prev.t === ')')) out.push({ t: '*' });
-      out.push({ t: 'num', v: env.get(t.name) });
+      out.push({ t: 'num', v: env.get(t.name), s: t.s, e: t.e, isVar: true });
       continue;
     }
     if (dateMode && UNITS.has(t.name) && out.length && out[out.length - 1].t === 'num') {
-      out.push({ t: 'unit', unit: UNITS.get(t.name) });
+      out.push({ t: 'unit', unit: UNITS.get(t.name), s: t.s, e: t.e });
+      continue;
     }
+    dropped.push({ s: t.s, e: t.e });
   }
   return out;
 }
 
-/* seed = previous blue value (or null). Returns the cleaned token list and the mode. */
+/* seed = previous locked value (or null). Returns tokens, mode and coloured spans. */
 function build(text, env, seed) {
-  const grouped = groupDates(tokenize(text), env);
+  const grouped = groupDates(tokenize(text));
   const dateMode = !!(seed && seed.t === 'date') || grouped.some(x => x.t === 'date');
-  return { toks: resolve(grouped, env, !!seed, dateMode), dateMode };
+  const dropped = [];
+  const toks = resolve(grouped, env, !!seed, dateMode, dropped);
+  const spans = toks
+    .filter(x => x.t === 'date' || x.t === 'unit' || x.isVar)
+    .map(x => ({ s: x.s, e: x.e, cls: x.isVar ? 'def' : 'dt' }))
+    .concat(dropped.map(d => ({ s: d.s, e: d.e, cls: 'cm' })));
+  spans.sort((a, b) => a.s - b.s);
+  return { toks, dateMode, spans };
 }
 
 /* Drop dangling operators / open brackets at the end, auto-close open brackets. */
@@ -392,6 +570,7 @@ function evalTokens(tokens) {
       if (op === '%') {
         if (node.pct) node.v = node.v / 100; else node.pct = true;
       } else {
+        if (!factOn()) throw new Error('factorials off');
         if (node.pct || !Number.isInteger(node.v) || node.v < 0 || node.v > 170) throw new Error('fact');
         node = { v: factorial(node.v), pct: false };
       }
@@ -407,7 +586,7 @@ function evalTokens(tokens) {
    Terms: a date, or "<whole number> <unit>". Signs apply to each term.
    - one date (+) with any number of durations  -> a date
    - two dates (one +, one -) and nothing else   -> days between
-   Anything else (brackets, * / % !, bare numbers, ...) shows no result. */
+   Anything else shows no result. */
 function evalDate(tokens) {
   let p = 0, sgn = 1;
   const terms = [];
@@ -440,44 +619,97 @@ function evalDate(tokens) {
 }
 
 /* ---------- Line model ----------
-   A line is:  [defs]  expr0 = R1 expr1 = R2 expr2 ...
-   R_k (the blue result after each "=") is app-managed and always equals the value
-   of everything before it. Segment k>0 continues from the previous value.
-   A blue result is a number, a date ("Mon, 9 Nov 2026") or a day count ("60 days"). */
+   line   = chunks separated by ";"
+   chunk  = [variable definitions] + tail
+   tail   = units; a unit ends after a locked result when a space + a new calculation follows
+   unit   = expr0 = R1 expr1 = R2 expr2 ...   (a chain)
+   R_k (the locked result after each "=") is app-managed and always equals the value of
+   everything before it in its unit. A result is a number, a date or a day count. */
 const RUN_RE = new RegExp(
   '^(?:(?:' + WD.join('|') + '), \\d{1,2} (?:' + MON.join('|') + ') \\d{4}' +
   '|-?\\d[\\d,]*(?:\\.\\d+)?(?:e[+-]\\d+)?(?: days?(?!\\p{L}))?)', 'iu');
+const NEWCALC_RE = /^\s+(?=[\d(]|\.\d|\p{L})/u;
 
-function analyzeTail(line, env, strict) {
-  const pieces = line.split('=');
-  const n = pieces.length;
-
-  // Nothing calculable before the first "=" -> leave the text alone
-  let firstLen;
-  try { firstLen = build(pieces[0], env, null).toks.length; } catch (e) { firstLen = 1; }
-  if (firstLen === 0) {
-    return { text: line, parts: [{ text: line, cls: '' }], ghost: null, map: c => c, runs: [] };
+function splitParts(text, spans) {
+  const out = [];
+  let c = 0;
+  for (const sp of spans) {
+    if (sp.s < c) continue;
+    if (sp.s > c) out.push({ text: text.slice(c, sp.s), cls: '' });
+    out.push({ text: text.slice(sp.s, sp.e), cls: sp.cls });
+    c = sp.e;
   }
+  if (c < text.length) out.push({ text: text.slice(c), cls: '' });
+  return out;
+}
 
-  const exprs = [], runsOld = [];
-  for (let k = 0; k < n; k++) {
-    if (k === 0) { exprs.push(pieces[0]); runsOld.push(''); }
-    else {
-      const m = pieces[k].match(RUN_RE);
-      const run = m ? m[0] : '';
-      runsOld.push(run);
-      exprs.push(pieces[k].slice(run.length));
+/* Concatenate per-piece results. rawLens = original length of each piece. */
+function composeList(res, rawLens, sep) {
+  let text = '', o = 0;
+  const parts = [], runs = [], ents = [];
+  res.forEach((r, i) => {
+    if (i > 0 && sep) { text += sep; parts.push({ text: sep, cls: '' }); }
+    const n0 = text.length;
+    ents.push({ o0: o, o1: o + rawLens[i], n0, map: r.map });
+    text += r.text;
+    for (const p of r.parts) parts.push(p);
+    for (const x of r.runs) runs.push({ eq: x.eq + n0, rs: x.rs + n0, re: x.re + n0 });
+    o += rawLens[i] + sep.length;
+  });
+  const last = res[res.length - 1];
+  const map = c => {
+    for (const e of ents) if (c <= e.o1) return e.n0 + e.map(c - e.o0);
+    return text.length;
+  };
+  return { text, parts, runs, map, ghost: last ? last.ghost : null };
+}
+
+/* Split a tail into units: after a locked result, whitespace followed by something that
+   starts a new calculation (digit, bracket, letter) begins a new unit. */
+function splitUnits(T) {
+  const pieces = T.split('=');
+  const units = [];
+  let cur = { start: 0, exprs: [pieces[0]], runsOld: [''] };
+  let pos = pieces[0].length + 1;
+  for (let k = 1; k < pieces.length; k++) {
+    const piece = pieces[k];
+    const m = piece.match(RUN_RE);
+    const run = m ? m[0] : '';
+    const rest = piece.slice(run.length);
+    if (run && NEWCALC_RE.test(rest)) {
+      cur.exprs.push(''); cur.runsOld.push(run);
+      cur.end = pos + run.length;
+      units.push(cur);
+      cur = { start: pos + run.length, exprs: [rest], runsOld: [''] };
+    } else {
+      cur.exprs.push(rest); cur.runsOld.push(run);
     }
+    pos += piece.length + 1;
+  }
+  cur.end = T.length;
+  units.push(cur);
+  return units;
+}
+
+function analyzeUnit(u, env, strict, autoLock) {
+  const raw = u.raw;
+  let firstB = null, firstLen;
+  try { firstB = build(u.exprs[0], env, null); firstLen = firstB.toks.length; } catch (e) { firstLen = 1; }
+  if (firstLen === 0) {
+    return { text: raw, parts: splitParts(raw, firstB.spans), ghost: null, map: c => c, runs: [] };
   }
 
-  const vals = [], ghostable = [];
+  const exprs = u.exprs.slice(), runsOld = u.runsOld.slice();
+  const vals = [], ghostable = [], spans = [];
   let ok = true;
-  for (let j = 0; j < n; j++) {
+  for (let j = 0; j < exprs.length; j++) {
+    const prev = j > 0 ? vals[j - 1] : null;
+    let b = null;
+    try { b = (j === 0 && firstB) ? firstB : build(exprs[j], env, prev); } catch (e) { b = null; }
+    spans.push(b ? b.spans : []);
     let v = null, g = false;
-    if (ok) {
+    if (ok && b) {
       try {
-        const prev = j > 0 ? vals[j - 1] : null;
-        const b = build(exprs[j], env, prev);
         const own = prep(b.toks);
         if (j === 0) {
           if (strict && own.length && ['+', '-', '*', '/', ')', '%', '!'].includes(own[0].t)) throw new Error('start');
@@ -497,24 +729,31 @@ function analyzeTail(line, env, strict) {
     vals.push(v); ghostable.push(g);
   }
 
+  // A calculation followed by ";" locks itself
+  let n = exprs.length;
+  if (autoLock && vals[n - 1] !== null && ghostable[n - 1]) {
+    exprs.push(''); runsOld.push(''); vals.push(vals[n - 1]); ghostable.push(false); spans.push([]); n++;
+  }
+
   let text = '';
   const parts = [], ents = [], runs = [];
   let o = 0;
   for (let j = 0; j < n; j++) {
     if (j > 0) {
-      const runNew = vals[j - 1] !== null ? fmtVal(vals[j - 1]) : '';
+      const pv = vals[j - 1];
+      const runNew = pv !== null ? fmtVal(pv) : '';
       const o0 = o + 1, o1 = o0 + runsOld[j].length;
       const eq = text.length;
       text += '=' + runNew;
       parts.push({ text: '=', cls: '' });
-      if (runNew) parts.push({ text: runNew, cls: 'res' });
+      if (runNew) parts.push({ text: runNew, cls: pv.t === 'num' ? 'res' : 'dt' });
       runs.push({ eq, rs: eq + 1, re: text.length });
       ents.push({ k: 'run', o0, o1, n1: text.length });
       o = o1;
     }
     const n0 = text.length;
     text += exprs[j];
-    parts.push({ text: exprs[j], cls: '' });
+    for (const p of splitParts(exprs[j], spans[j])) parts.push(p);
     ents.push({ k: 'expr', o0: o, o1: o + exprs[j].length, n0 });
     o += exprs[j].length;
   }
@@ -532,32 +771,43 @@ function analyzeTail(line, env, strict) {
   return { text, parts, ghost, map, runs };
 }
 
-/* Variable definitions live at the start of a line: name=number (several allowed).
+function analyzeTail(T, env, strict, autoLock) {
+  const units = splitUnits(T);
+  const res = units.map((u, i) => {
+    u.raw = T.slice(u.start, u.end);
+    return analyzeUnit(u, env, strict && i === 0, autoLock && i === units.length - 1);
+  });
+  return composeList(res, units.map(u => u.end - u.start), '');
+}
+
+/* Variable definitions live at the start of a chunk: name=number (several allowed).
    Anything before a definition may only be letters / spaces / punctuation.
-   Names with digits in them are accepted but ignored (treated as comments).
-   today/tomorrow/yesterday are reserved. "due=26 oct" (a date) is not a definition. */
+   Names with digits are ignored (comments). Reserved date words are ignored too,
+   with a grey note. "name=" with no number after it is left to the lock logic
+   when the name is reserved (so "today=" locks the date). */
 const NUM_RE = /^[ \t]*(-?(?:\d+(?:,\d+)*(?:\.\d+)?|\.\d+))(?!\d|\.\d)(?![ \t]*[+\-*\/×÷−–%!()])/;
 const DATE_AFTER = /^[ \t]*(?:st|nd|rd|th)?[ \t]*(?:january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\b/i;
 const EXPR_CHAR = /[\d+\-*\/()%!×÷−–]/;
 const MIXED_G = /\p{L}[\p{L}\d]*\d[\p{L}\d]*/gu;
 
-function parseDefs(line) {
+function parseDefs(chunk) {
   const defs = [];
   let pos = 0, blocked = false;
   while (true) {
-    const e = line.indexOf('=', pos);
+    const e = chunk.indexOf('=', pos);
     if (e < 0) break;
-    const seg = line.slice(pos, e);
+    const seg = chunk.slice(pos, e);
     if (EXPR_CHAR.test(seg.replace(MIXED_G, ' '))) break;
     const nm = seg.match(/(\p{L}[\p{L}\d]*)[ \t]*$/u);
     if (!nm) break;
-    if (RESERVED.has(nm[1].toLowerCase())) break;
-    const vm = line.slice(e + 1).match(NUM_RE);
-    if (!vm) { blocked = true; break; }
-    if (DATE_AFTER.test(line.slice(e + 1 + vm[0].length))) { blocked = true; break; }
+    const lower = nm[1].toLowerCase();
+    const reserved = RESERVED.has(lower);
+    const vm = chunk.slice(e + 1).match(NUM_RE);
+    if (!vm) { if (!reserved) blocked = true; break; }
+    if (DATE_AFTER.test(chunk.slice(e + 1 + vm[0].length))) { blocked = true; break; }
     defs.push({
-      name: nm[1].toLowerCase(),
-      ignored: /\d/.test(nm[1]),
+      name: lower,
+      reason: /\d/.test(nm[1]) ? 'digits' : (reserved ? 'reserved' : null),
       value: parseFloat(vm[1].replace(/,/g, '')),
       start: pos + nm.index,
       end: e + 1 + vm[0].length
@@ -567,30 +817,96 @@ function parseDefs(line) {
   return { defs, pos, blocked };
 }
 
-function analyzeLine(line, pre, env) {
-  const { defs, pos, blocked } = pre;
-  const tail = line.slice(pos);
-  const r = blocked
-    ? { text: tail, parts: [{ text: tail, cls: '' }], ghost: null, map: c => c, runs: [] }
-    : analyzeTail(tail, env, defs.length > 0);
+const isCommentLine = l => /^\s*#/.test(l);
+const plainRes = t => ({ text: t, parts: [{ text: t, cls: '' }], ghost: null, map: c => c, runs: [] });
 
-  if (!defs.length) return r;
+function analyzeChunk(raw, pre, env, autoLock) {
+  const { defs, pos, blocked } = pre;
+  const tail = raw.slice(pos);
+  const r = blocked ? plainRes(tail) : analyzeTail(tail, env, defs.length > 0, autoLock);
+
+  const notes = [];
+  const bad = [...new Set(defs.filter(d => d.reason === 'reserved').map(d => '"' + d.name + '"'))];
+  if (bad.length) notes.push(bad.join(', ') + ' will be ignored: reserved word');
+
+  if (!defs.length) return Object.assign({}, r, { notes });
 
   const parts = [];
   let c = 0;
   for (const d of defs) {
-    if (d.start > c) parts.push({ text: line.slice(c, d.start), cls: '' });
-    parts.push({ text: line.slice(d.start, d.end), cls: d.ignored ? '' : 'def' });
+    if (d.start > c) parts.push({ text: raw.slice(c, d.start), cls: 'cm' });
+    parts.push({ text: raw.slice(d.start, d.end), cls: d.reason ? 'cm' : 'def' });
     c = d.end;
   }
   for (const p of r.parts) parts.push(p);
   return {
-    text: line.slice(0, pos) + r.text,
+    text: raw.slice(0, pos) + r.text,
     parts,
     ghost: r.ghost,
+    notes,
     map: x => (x < pos ? x : pos + r.map(x - pos)),
     runs: r.runs.map(x => ({ eq: x.eq + pos, rs: x.rs + pos, re: x.re + pos }))
   };
+}
+
+function analyzeLine(line, preChunks, env) {
+  if (isCommentLine(line)) {
+    return { text: line, parts: [{ text: line, cls: 'cm' }], ghost: null, note: null, map: c => c, runs: [] };
+  }
+  const chunks = line.split(';');
+  const res = chunks.map((c, i) => analyzeChunk(c, preChunks[i], env, i < chunks.length - 1));
+  const comp = composeList(res, chunks.map(c => c.length), ';');
+
+  const notes = [];
+  for (const r of res) for (const n of r.notes) if (!notes.includes(n)) notes.push(n);
+  if (!factOn() && /[\d)]\s*!/.test(line)) notes.push('factorials are off (switch on above)');
+  if (line.includes('×')) notes.push('× is not supported, use *');
+  comp.note = notes.length ? notes.join('   ') : null;
+  return comp;
+}
+
+/* ---------- Autocomplete ----------
+   Only when the caret is at the end of a line, after 2+ letters.
+   After a number: units (days/weeks/months/years), then months, then your variables.
+   Elsewhere: today/tomorrow/yesterday, weekdays, months, then your variables. First match wins.
+   After a locked result + space, you are starting a new calculation, so no unit mode. */
+const SUG_REL = ['today', 'tomorrow', 'yesterday'];
+const SUG_WD = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const SUG_MON = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const SUG_UP = ['days', 'weeks', 'months', 'years'];
+const SUG_US = ['day', 'week', 'month', 'year'];
+
+function computeSuggestion() {
+  if (!focused) return null;
+  const text = input.value;
+  const s = input.selectionStart, en = input.selectionEnd;
+  if (s !== en || s === 0) return null;
+  if (s < text.length && text[s] !== '\n') return null;
+  const head = text.slice(0, s);
+  const before = head.slice(head.lastIndexOf('\n') + 1);
+  if (/^\s*#/.test(before)) return null;
+  const m = before.match(/(\p{L}+)$/u);
+  if (!m || m[1].length < 2) return null;
+  const prefix = before.slice(0, before.length - m[1].length);
+  if (/\p{L}[\p{L}\d]*$/u.test(prefix)) return null;            // part of a name like v9t
+  const word = m[1].toLowerCase();
+  const pre = prefix.replace(/[\s,]+$/, '');
+  const nm = pre.match(/(\d[\d,]*(?:\.\d+)?)$/);
+  let numMode = !!nm;
+  if (nm && /[\s,]$/.test(prefix)) {
+    const endAbs = (head.length - before.length) + pre.length;
+    if (lastRuns.some(r => r.re === endAbs)) numMode = false;   // number is a locked result
+  }
+  let list;
+  if (numMode) {
+    const one = parseFloat(nm[1].replace(/,/g, '')) === 1;
+    list = (one ? SUG_US : SUG_UP).concat(SUG_MON, knownVars);
+  } else {
+    list = SUG_REL.concat(SUG_WD, SUG_MON, knownVars);
+  }
+  const cand = list.find(c => c.length > word.length && c.startsWith(word));
+  if (!cand) return null;
+  return { rem: cand.slice(word.length), line: head.split('\n').length - 1, caret: s, visible: false };
 }
 
 /* ---------- Rendering ---------- */
@@ -600,7 +916,7 @@ function metrics() {
   return { charW, cols };
 }
 
-function renderOverlay(views) {
+function renderOverlay(views, sug) {
   const { charW, cols } = metrics();
   overlay.textContent = '';
   views.forEach((r, i) => {
@@ -613,23 +929,37 @@ function renderOverlay(views) {
       sp.textContent = part.text;
       row.appendChild(sp);
     }
-    if (r.ghost) {
-      const len = r.text.length;
-      const rows = len ? Math.ceil(len / cols) : 1;
-      const used = len ? len - (rows - 1) * cols : 0;
-      let col = null, rowIdx = 0;
-      if (used + 1 + r.ghost.length <= cols) { col = used + 1; rowIdx = rows - 1; }
-      else {
+
+    const place = (txt, col, rIdx) => {
+      const g = document.createElement('span');
+      g.className = 'gh';
+      g.textContent = txt;
+      g.style.top = (rIdx * LINE_H) + 'px';
+      g.style.left = (PAD + col * charW) + 'px';
+      row.appendChild(g);
+    };
+
+    const len = r.text.length;
+    const rows = len ? Math.ceil(len / cols) : 1;
+    const used = len ? len - (rows - 1) * cols : 0;
+    let baseCol = used, sugShown = false;
+
+    if (sug && sug.line === i && used + sug.rem.length <= cols) {
+      place(sug.rem, used, rows - 1);
+      baseCol = used + sug.rem.length;
+      sugShown = true;
+      sug.visible = true;
+    }
+
+    // While a suggestion is showing, the result is hidden (the half-typed word would give a misleading one)
+    const tail = (sugShown ? [] : [r.ghost]).concat([r.note]).filter(Boolean).join('   ');
+    if (tail) {
+      const gap = baseCol > 0 ? (sugShown ? 2 : 1) : 0;
+      if (baseCol + gap + tail.length <= cols) place(tail, baseCol + gap, rows - 1);
+      else if (!sugShown) {
         const next = views[i + 1];
-        if (!next || next.text.trim() === '') { col = 0; rowIdx = rows; }
-      }
-      if (col !== null) {
-        const g = document.createElement('span');
-        g.className = 'gh';
-        g.textContent = r.ghost;
-        g.style.top = (rowIdx * LINE_H) + 'px';
-        g.style.left = (PAD + col * charW) + 'px';
-        row.appendChild(g);
+        if (!next || next.text.trim() === '') place(tail, 0, rows);
+        /* else: no room and the next row is occupied -> hide rather than overlap */
       }
     }
     overlay.appendChild(row);
@@ -662,10 +992,10 @@ function renderVars(info, ignored) {
     }
     varsBox.appendChild(chip);
   }
-  for (const name of ignored) {
+  for (const [name, reason] of ignored) {
     const chip = document.createElement('span');
     chip.className = 'chip ign';
-    chip.textContent = name + ' (ignored: contains digits)';
+    chip.textContent = name + ' (ignored: ' + (reason === 'digits' ? 'contains digits' : 'reserved date word') + ')';
     varsBox.appendChild(chip);
   }
 }
@@ -679,21 +1009,26 @@ function process() {
   const text = input.value;
   const s0 = input.selectionStart, e0 = input.selectionEnd;
   const lines = text.split('\n');
+  relUsed = false;
+  todayLbl.textContent = 'Today: ' + fmtDate(todayDay());
 
-  // Pass 1: collect variables from ALL lines (later definitions win, names case-insensitive)
-  const pre = lines.map(parseDefs);
-  const info = new Map();          // name -> {value, n, line}
-  const ignored = new Set();
-  pre.forEach((p, i) => {
-    for (const d of p.defs) {
-      if (d.ignored) { ignored.add(d.name); continue; }
-      const x = info.get(d.name) || { n: 0 };
-      x.n++; x.value = d.value; x.line = i + 1;
-      info.set(d.name, x);
+  // Pass 1: collect variables from ALL lines and chunks (later definitions win, names case-insensitive)
+  const pre = lines.map(l => isCommentLine(l) ? [] : l.split(';').map(parseDefs));
+  const info = new Map();           // name -> {value, n, line}
+  const ignored = new Map();        // name -> reason
+  pre.forEach((chunkDefs, i) => {
+    for (const ch of chunkDefs) {
+      for (const d of ch.defs) {
+        if (d.reason) { ignored.set(d.name, d.reason); continue; }
+        const x = info.get(d.name) || { n: 0 };
+        x.n++; x.value = d.value; x.line = i + 1;
+        info.set(d.name, x);
+      }
     }
   });
   const env = new Map();
   for (const [name, x] of info) env.set(name, x.value);
+  knownVars = [...info.keys()];
 
   // Pass 2: evaluate every line with the full variable set
   const out = [], views = [];
@@ -714,36 +1049,83 @@ function process() {
     input.setSelectionRange(ns ?? newText.length, ne ?? newText.length);
   }
   lastViews = views;
+  lastRelUsed = relUsed;
+  currentSug = computeSuggestion();
   autoGrow();
-  renderOverlay(views);
+  renderOverlay(views, currentSug);
   renderVars(info, ignored);
+  scheduleSave();
 }
 
 /* ---------- Keyboard behaviour ---------- */
+
+/* Is there anything new to lock at this caret position?
+   dup = true when a result is already locked here with nothing new typed after it,
+   or when the current ";"-chunk is still empty. */
+function lockState(pos) {
+  const text = input.value;
+  const ls = text.slice(0, pos).lastIndexOf('\n') + 1;
+  const before = text.slice(ls, pos);
+  const cs = ls + before.lastIndexOf(';') + 1;          // start of the current chunk
+  let run = null;
+  for (const r of lastRuns) if (r.eq >= cs && r.eq < pos) run = r;
+  if (run) {
+    if (pos <= run.re) return { dup: true, moveTo: run.re };
+    if (/^\s*$/.test(text.slice(run.re, pos))) return { dup: true, moveTo: null };
+    return { dup: false };
+  }
+  if (/^\s*$/.test(text.slice(cs, pos))) return { dup: true, moveTo: null };
+  return { dup: false };
+}
+
 function insertEq() {
-  let s = input.selectionStart, en = input.selectionEnd;
+  const s = input.selectionStart, en = input.selectionEnd;
   if (s === en) {
-    for (const r of lastRuns) {
-      if (s > r.eq && s < r.re && r.re > r.rs) { s = en = r.re; break; }
+    const text = input.value;
+    const ls = text.slice(0, s).lastIndexOf('\n') + 1;
+    if (/^\s*#/.test(text.slice(ls, s))) return;           // comment line: nothing to lock
+    const st = lockState(s);
+    if (st.dup) {
+      if (st.moveTo !== null) input.setSelectionRange(st.moveTo, st.moveTo);
+      return;
     }
   }
   input.setRangeText('=', s, en, 'end');
   process();
 }
 
+function sugReady() {
+  return currentSug && currentSug.visible &&
+         currentSug.caret === input.selectionStart && input.selectionStart === input.selectionEnd;
+}
+
+function acceptSuggestion() {
+  const s = input.selectionStart;
+  input.setRangeText(currentSug.rem, s, s, 'end');
+  process();
+}
+
 input.addEventListener('keydown', e => {
   if (e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
 
-  /* Tab = "=" (Shift+Tab still moves focus away) */
+  /* Tab: accept a visible suggestion, otherwise act as "=" (Shift+Tab still moves focus) */
   if (e.key === 'Tab' && !e.shiftKey) {
     e.preventDefault();
-    insertEq();
+    if (sugReady()) acceptSuggestion(); else insertEq();
+    return;
+  }
+
+  /* Right arrow also accepts a visible suggestion */
+  if (e.key === 'ArrowRight' && !e.shiftKey && sugReady()) {
+    e.preventDefault();
+    acceptSuggestion();
     return;
   }
 
   /* Enter = lock the result (like "=") and start a new line.
-     Plain new line if: nothing to calculate, cursor not at line end, or Shift held. */
+     Plain new line if: a suggestion is showing, nothing to calculate, cursor not at line end, or Shift held. */
   if (e.key === 'Enter' && !e.shiftKey) {
+    if (sugReady()) return;
     const s = input.selectionStart, en = input.selectionEnd, text = input.value;
     if (s !== en) return;
     const atLineEnd = s === text.length || text[s] === '\n';
@@ -757,12 +1139,23 @@ input.addEventListener('keydown', e => {
   }
 });
 
-/* "=" + result behave as one unit when deleting; typing starts after the result */
+/* "=" + result behave as one unit when deleting; typing starts after the result;
+   a typed "=" with nothing new to lock is ignored */
 input.addEventListener('beforeinput', e => {
   const t = e.inputType || '';
+  const s = input.selectionStart, en = input.selectionEnd;
+
+  if (t === 'insertText' && e.data === '=' && s === en) {
+    const st = lockState(s);
+    if (st.dup) {
+      e.preventDefault();
+      if (st.moveTo !== null) input.setSelectionRange(st.moveTo, st.moveTo);
+      return;
+    }
+  }
+
   const runs = lastRuns;
   if (!runs.length) return;
-  const s = input.selectionStart, en = input.selectionEnd;
 
   if (t === 'deleteContentBackward' || t === 'deleteContentForward') {
     let a = s, b = en;
@@ -794,19 +1187,86 @@ input.addEventListener('beforeinput', e => {
 });
 
 input.addEventListener('input', process);
-commaToggle.addEventListener('change', () => { commaStyle.disabled = !commaToggle.checked; process(); });
-commaStyle.addEventListener('change', process);
-decSel.addEventListener('change', process);
+input.addEventListener('keyup', process);        // caret moves (arrows, Home, End) update the suggestion
+input.addEventListener('mouseup', process);
+input.addEventListener('focus', () => { focused = true; process(); });
+input.addEventListener('blur', () => { focused = false; process(); });
+
+function settingChanged() { saveSettings(); process(); }
+commaToggle.addEventListener('change', () => { commaStyle.disabled = !commaToggle.checked; settingChanged(); });
+commaStyle.addEventListener('change', settingChanged);
+decSel.addEventListener('change', settingChanged);
+factToggle.addEventListener('change', settingChanged);
 window.addEventListener('resize', process);
 
-/* If the page stays open past midnight, refresh so today/tomorrow results move */
-let lastToday = todayDay();
-setInterval(() => {
-  const t = todayDay();
-  if (t !== lastToday) { lastToday = t; process(); }
-}, 30000);
+/* ---------- Popup, clear, cross-window sync ---------- */
+popBtn.addEventListener('click', () => {
+  const url = location.href.split('#')[0] + '#popup';
+  const w = window.open(url, 'calculiner-popup', 'popup=yes,width=560,height=760,resizable=yes,scrollbars=yes');
+  if (!w) alert('The popup was blocked by your browser. Allow popups for this page and try again.');
+  else w.focus();
+});
 
+clearBtn.addEventListener('click', () => {
+  if (!confirm('Clear the whole sheet? This also deletes the autosaved copy.')) return;
+  input.value = '';
+  process();
+  clearTimeout(saveTimer);
+  doSave();
+  input.focus();
+});
+
+/* The popup and the main window share one saved sheet: keep them in sync. */
+window.addEventListener('storage', e => {
+  if (e.key === TEXT_KEY && e.newValue !== null && e.newValue !== input.value) {
+    const s = Math.min(input.selectionStart, e.newValue.length);
+    input.value = e.newValue;
+    lastSaved = e.newValue;
+    input.setSelectionRange(s, s);
+    process();
+    lastSaved = input.value;          // never write back what we just received (prevents ping-pong)
+  } else if (e.key === SET_KEY && e.newValue) {
+    try { applySettings(JSON.parse(e.newValue)); process(); } catch (err) {}
+  }
+});
+
+window.addEventListener('pagehide', () => { clearTimeout(saveTimer); doSave(); });
+
+/* ---------- Day change while the page stays open ----------
+   Checked every 30 s, and immediately when the tab becomes visible / focused again
+   (covers sleep and background throttling). If the sheet uses today/tomorrow/yesterday/
+   weekday words, everything is recalculated and a banner explains why. */
+let lastToday = todayDay();
+
+function showNotice() {
+  dayNotice.textContent = '';
+  const sp = document.createElement('span');
+  sp.textContent = 'Day changed: today is now ' + fmtDate(todayDay()) +
+    '. Results using today, tomorrow, yesterday or weekday names were recalculated.';
+  const b = document.createElement('button');
+  b.textContent = 'Dismiss';
+  b.addEventListener('click', () => dayNotice.classList.remove('show'));
+  dayNotice.appendChild(sp);
+  dayNotice.appendChild(b);
+  dayNotice.classList.add('show');
+}
+
+function checkDay() {
+  const t = todayDay();
+  if (t !== lastToday) {
+    lastToday = t;
+    if (lastRelUsed) showNotice();
+    process();
+  }
+}
+setInterval(checkDay, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDay(); });
+window.addEventListener('focus', checkDay);
+
+focused = document.activeElement === input;
+if (!storageOk) showSave();
 process();
+if (storageOk && lastSaved) showSave();
 </script>
 </body>
 </html>
