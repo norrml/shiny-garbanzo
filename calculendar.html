@@ -19,6 +19,13 @@
   .bar select { font: inherit; background: var(--bg); color: var(--fg);
                 border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
   .bar select:disabled { opacity: .45; }
+  .bar .today { margin-left: auto; color: var(--green); }
+  .notice { width: min(760px,100%); box-sizing: border-box; margin-bottom: 10px; padding: 8px 12px;
+            border: 1px solid var(--green); border-radius: 8px; font-size: 13px;
+            display: none; align-items: center; justify-content: space-between; gap: 10px; }
+  .notice.show { display: flex; }
+  .notice button { font: inherit; background: none; border: 1px solid var(--border); color: var(--fg);
+                   border-radius: 6px; padding: 2px 8px; cursor: pointer; }
   .box { position: relative; width: min(760px,100%); border: 1px solid var(--border);
          border-radius: 10px; overflow: hidden; }
 
@@ -87,13 +94,17 @@
         <option>3</option><option>4</option><option>5</option>
       </select>
     </label>
+    <label><input type="checkbox" id="factToggle"> Factorials (!)</label>
+    <span class="today" id="todayLbl"></span>
   </div>
+
+  <div class="notice" id="dayNotice"></div>
 
   <div class="box">
     <span class="probe" id="probe"></span>
     <div class="overlay" id="overlay"></div>
     <textarea id="input" spellcheck="false" autofocus
-      placeholder="Try:  3+ 5  ·  200 + 10%  ·  v=1.5 then 2v  ·  today + 2 weeks  ·  friday + 2 weeks  ·  26 oct + 10 days"></textarea>
+      placeholder="Try:  3+ 5  ·  200 + 10%  ·  v=1.5 then 2v  ·  today + 2 weeks  ·  next friday  ·  26 oct + 10 days"></textarea>
   </div>
 
   <div class="vars" id="vars"></div>
@@ -102,16 +113,18 @@
     <summary>What Calculiner does (click to fold)</summary>
     <ul>
       <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately. Long lines use the full box width before wrapping.</li>
-      <li><b>Colours.</b> <span class="gr">Green</span> = a date word or date result the app recognised. <span class="b">Blue</span> = a locked number result. <span class="r">Red</span> = a variable definition. <span class="g">Grey</span> = live results, suggestions and notes.</li>
-      <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>×</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code> <code>!</code> (factorial, whole numbers 0 to 170). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
-      <li><b>Dates.</b> Use <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekday names, or a date with a month name: <code>26 oct</code>, <code>26 oct 2026</code>, <code>oct 26</code>, <code>26th October</code> (no year = this year). <code>friday</code> and <code>next friday</code> = the first Friday after today (a week ahead if today is Friday); <code>last friday</code> = the most recent Friday before today. Add or subtract whole <b>days, weeks, months, years</b>: <code>today + 2 weeks</code>, <code>tomorrow - 3 days</code>, <code>friday + 1 month</code>. Two dates subtracted give the days between. A weekday written next to a full date (<code>Fri 6 Nov</code>) is just a label. Month maths stops at month end (31 Jan + 1 month = 28 Feb). Numeric dates like 26/10/2026 are not supported. Results using today, tomorrow, yesterday or a weekday change when the day changes. Dates can't be stored in variables.</li>
-      <li><b>Autocomplete.</b> When you type 2+ letters of <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, a weekday or a month at the end of a line, the rest appears in grey. Press <code>Tab</code> or <code>→</code> to accept it. After a number it suggests <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code> instead (<code>mo</code> becomes months, not Monday). While a suggestion shows, the result on that line is hidden and Enter makes a plain new line.</li>
+      <li><b>Colours.</b> <span class="gr">Green</span> = a date word or date result the app recognised. <span class="b">Blue</span> = a locked number result. <span class="r">Red</span> = a variable (its definition and wherever you use it). <span class="g">Grey</span> = live results, suggestions and notes.</li>
+      <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code>. Multiplication is <code>*</code> only (the × sign is not supported). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
+      <li><b>Factorials.</b> Off by default. Tick "Factorials (!)" above to allow <code>5!</code> (whole numbers 0 to 170). While off, a line containing <code>5!</code> shows no result and a grey note explains why.</li>
+      <li><b>Dates.</b> Use <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekday names, or a date with a month name: <code>26 oct</code>, <code>26 oct 2026</code>, <code>oct 26</code>, <code>26th October</code> (no year = this year). Weekdays: <code>friday</code> = the first Friday after today; <code>next friday</code> = Friday of <i>next week</i> (weeks run Monday to Sunday); <code>last friday</code> = the most recent Friday before today. Add or subtract whole <b>days, weeks, months, years</b>: <code>today + 2 weeks</code>, <code>tomorrow - 3 days</code>, <code>next friday + 1 month</code>. Two dates subtracted give the days between. A weekday written next to a full date (<code>Fri 6 Nov</code>) is just a label. Month maths stops at month end (31 Jan + 1 month = 28 Feb). Numeric dates like 26/10/2026 are not supported. Dates can't be stored in variables.</li>
+      <li><b>Leaving the page open.</b> The app checks the date every 30 seconds, and when you return to the tab. If the day changes, results that use today, tomorrow, yesterday or weekday names are recalculated automatically (locked ones too) and a banner tells you. Dates you typed out in full never change. The toolbar shows the date the app is using.</li>
+      <li><b>Autocomplete.</b> When you type 2+ letters at the end of a line, the rest appears in grey: <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekdays, months, and <b>your own variable names</b> (date words are checked first). Press <code>Tab</code> or <code>→</code> to accept. After a number it suggests <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code> instead (<code>mo</code> becomes months, not Monday). While a suggestion shows, the result on that line is hidden and Enter makes a plain new line.</li>
       <li><b>Unfinished input.</b> <code>39+1+</code> still shows <span class="g">=40</span>, and open brackets are closed for you.</li>
       <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code> (when no suggestion is showing), or press <code>Enter</code>. The answer turns blue (or green for dates). Enter also starts a new line, but only if the line has something to calculate. <code>Shift+Enter</code> always gives a plain new line. Keep typing an operator after a locked result to continue from it (<code>today=</code> then <code>+ 3 days</code>). Edit anything earlier on the line and the locked results update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a locked result, so use an operator. Don't type the word "days" straight after a locked number.</li>
-      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 ; rr=2 ; dd=4</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5, and <code>today + n days</code> works. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come before any numbers or operators on its line.</li>
+      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>; later uses of the name are red too. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 ; rr=2 ; dd=4</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5, and <code>today + n days</code> works. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come before any numbers or operators on its line.</li>
       <li><b>Reserved words can't be variables.</b> A variable with one of these names is ignored: a grey note appears on the line and it shows dimmed in the variable list. (Typing <code>today=</code> or <code>sun=</code> locks the date instead, since <code>=</code> means lock.) Reserved: <span id="resList"></span></li>
       <li><b>Variable list.</b> Every detected variable and its value is shown under the box. A name defined more than once is flagged in red with the line that wins. Ignored names appear dimmed.</li>
-      <li><b>Comments are ignored.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. A weekday word (<code>sat</code>, <code>sun</code>, <code>wed</code>, <code>mon</code> ...) anywhere is read as a date, and a month word next to a day number (<code>mar 5</code>) is too. A 4-digit number right after a day and month is read as the year. <code>x</code> is not multiplication; use <code>*</code> or <code>×</code>.</li>
+      <li><b>Comments are ignored.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. A weekday word (<code>sat</code>, <code>sun</code>, <code>wed</code>, <code>mon</code> ...) anywhere is read as a date, and a month word next to a day number (<code>mar 5</code>) is too. A 4-digit number right after a day and month is read as the year.</li>
       <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each locked result carries forward exactly as shown.</li>
       <li><b>Commas in results.</b> Off by default. Choose International (1,234,567), Indian (12,34,567) or East Asian (123,4567).</li>
       <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials, impossible dates (31 Feb) and malformed lines show no result, so you never see a wrong number.</li>
@@ -128,8 +141,12 @@ const help = document.getElementById('help');
 const commaToggle = document.getElementById('commaToggle');
 const commaStyle = document.getElementById('commaStyle');
 const decSel = document.getElementById('decSel');
+const factToggle = document.getElementById('factToggle');
+const todayLbl = document.getElementById('todayLbl');
+const dayNotice = document.getElementById('dayNotice');
 probe.textContent = '0'.repeat(100);
 if (/-IN$/i.test(navigator.language || '')) commaStyle.value = 'indian';
+const factOn = () => factToggle.checked;
 
 try { if (localStorage.getItem('calculiner.help') === 'closed') help.open = false; } catch (e) {}
 help.addEventListener('toggle', () => {
@@ -141,6 +158,9 @@ let lastRuns = [];      // absolute positions of every "=" + its managed result
 let lastViews = [];     // per-line analysis of the current text
 let currentSug = null;  // active autocomplete suggestion
 let focused = false;
+let knownVars = [];     // variable names currently defined (for autocomplete)
+let relUsed = false;    // did this pass use today/tomorrow/yesterday/weekday words?
+let lastRelUsed = false;
 
 function group(intPart, style) {
   if (style === 'indian') {
@@ -232,10 +252,17 @@ function addDur(day, n, unit) {
   if (!(y >= 1000 && y <= 9999)) throw new Error('range');
   return r;
 }
-/* dir +1: first such weekday after today. dir -1: most recent one before today. */
-function weekdayDate(wd, dir) {
+/* mode 'first': first such weekday after today (7 days ahead if today is that weekday).
+   mode 'next' : that weekday in the NEXT Monday-to-Sunday week.
+   mode 'last' : most recent such weekday before today. */
+function weekdayDate(wd, mode) {
   const t = todayDay(), w = dow(t);
-  return dir > 0 ? t + (((wd - w + 7) % 7) || 7) : t - (((w - wd + 7) % 7) || 7);
+  if (mode === 'next') {
+    const monThisWeek = t - ((w + 6) % 7);
+    return monThisWeek + 7 + ((wd + 6) % 7);
+  }
+  if (mode === 'last') return t - (((w - wd + 7) % 7) || 7);
+  return t + (((wd - w + 7) % 7) || 7);
 }
 function fmtDate(day) {
   const d = new Date(day * 86400000);
@@ -249,8 +276,8 @@ function fmtVal(x) {
 
 /* ---------- Tokenizer ----------
    Numbers, operators and letter-only words. Words containing digits (v99t) are
-   comments. Commas and other punctuation are ignored. Every token remembers its
-   start/end offsets in the original text so recognised words can be coloured. */
+   comments. Commas and other punctuation (including ×) are ignored. Every token
+   remembers its start/end offsets in the original text so words can be coloured. */
 function tokenize(s) {
   let str = '';
   const map = [];
@@ -279,7 +306,7 @@ function tokenize(s) {
     }
     if (c === '+') { add({ t: '+' }, i, i + 1); i++; continue; }
     if ('-−–'.includes(c)) { add({ t: '-' }, i, i + 1); i++; continue; }
-    if ('*×'.includes(c)) { add({ t: '*' }, i, i + 1); i++; continue; }
+    if (c === '*') { add({ t: '*' }, i, i + 1); i++; continue; }
     if ('/÷'.includes(c)) { add({ t: '/' }, i, i + 1); i++; continue; }
     if ('()%!'.includes(c)) { add({ t: c }, i, i + 1); i++; continue; }
     i++;
@@ -331,18 +358,21 @@ function groupDates(tokens) {
     const t = tokens[i];
     if (t.t === 'word') {
       if (RELATIVE.has(t.name)) {
+        relUsed = true;
         out.push({ t: 'date', v: todayDay() + RELATIVE.get(t.name), s: t.s, e: t.e });
         i++; continue;
       }
       if ((t.name === 'next' || t.name === 'last') && isWD(tokens[i + 1])) {
+        relUsed = true;
         const w = tokens[i + 1];
-        out.push({ t: 'date', v: weekdayDate(WEEKDAYS.get(w.name), t.name === 'next' ? 1 : -1), s: t.s, e: w.e });
+        out.push({ t: 'date', v: weekdayDate(WEEKDAYS.get(w.name), t.name), s: t.s, e: w.e });
         i += 2; continue;
       }
       if (isWD(t)) {
         const g = tryDate(i + 1);                     // "Fri 6 Nov": weekday is only a label
         if (g) { out.push(Object.assign({}, g.tok, { s: t.s })); i = g.next; continue; }
-        out.push({ t: 'date', v: weekdayDate(WEEKDAYS.get(t.name), 1), s: t.s, e: t.e });
+        relUsed = true;
+        out.push({ t: 'date', v: weekdayDate(WEEKDAYS.get(t.name), 'first'), s: t.s, e: t.e });
         i++; continue;
       }
     }
@@ -367,7 +397,7 @@ function resolve(tokens, env, seeded, dateMode) {
     if (env.has(t.name)) {
       const prev = out.length ? out[out.length - 1] : (seeded ? { t: 'num' } : null);
       if (prev && (prev.t === 'num' || prev.t === ')')) out.push({ t: '*' });
-      out.push({ t: 'num', v: env.get(t.name), s: t.s, e: t.e });
+      out.push({ t: 'num', v: env.get(t.name), s: t.s, e: t.e, isVar: true });
       continue;
     }
     if (dateMode && UNITS.has(t.name) && out.length && out[out.length - 1].t === 'num') {
@@ -377,12 +407,14 @@ function resolve(tokens, env, seeded, dateMode) {
   return out;
 }
 
-/* seed = previous locked value (or null). Returns tokens, mode and green spans. */
+/* seed = previous locked value (or null). Returns tokens, mode and coloured spans. */
 function build(text, env, seed) {
   const grouped = groupDates(tokenize(text));
   const dateMode = !!(seed && seed.t === 'date') || grouped.some(x => x.t === 'date');
   const toks = resolve(grouped, env, !!seed, dateMode);
-  const spans = toks.filter(x => x.t === 'date' || x.t === 'unit').map(x => ({ s: x.s, e: x.e }));
+  const spans = toks
+    .filter(x => x.t === 'date' || x.t === 'unit' || x.isVar)
+    .map(x => ({ s: x.s, e: x.e, cls: x.isVar ? 'def' : 'dt' }));
   return { toks, dateMode, spans };
 }
 
@@ -453,6 +485,7 @@ function evalTokens(tokens) {
       if (op === '%') {
         if (node.pct) node.v = node.v / 100; else node.pct = true;
       } else {
+        if (!factOn()) throw new Error('factorials off');
         if (node.pct || !Number.isInteger(node.v) || node.v < 0 || node.v > 170) throw new Error('fact');
         node = { v: factorial(node.v), pct: false };
       }
@@ -514,7 +547,7 @@ function splitParts(text, spans) {
   let c = 0;
   for (const sp of spans) {
     if (sp.s > c) out.push({ text: text.slice(c, sp.s), cls: '' });
-    out.push({ text: text.slice(sp.s, sp.e), cls: 'dt' });
+    out.push({ text: text.slice(sp.s, sp.e), cls: sp.cls });
     c = sp.e;
   }
   if (c < text.length) out.push({ text: text.slice(c), cls: '' });
@@ -652,10 +685,14 @@ function analyzeLine(line, pre, env) {
     ? { text: tail, parts: [{ text: tail, cls: '' }], ghost: null, map: c => c, runs: [] }
     : analyzeTail(tail, env, defs.length > 0);
 
-  if (!defs.length) return r;
+  const notes = [];
+  const bad = [...new Set(defs.filter(d => d.reason === 'reserved').map(d => '"' + d.name + '"'))];
+  if (bad.length) notes.push(bad.join(', ') + ' will be ignored: reserved word');
+  if (!factOn() && /[\d)]\s*!/.test(line)) notes.push('factorials are off (switch on above)');
+  if (line.includes('×')) notes.push('× is not supported, use *');
+  const note = notes.length ? notes.join('   ') : null;
 
-  const names = [...new Set(defs.filter(d => d.reason === 'reserved').map(d => '"' + d.name + '"'))];
-  const note = names.length ? names.join(', ') + ' will be ignored: reserved word' : null;
+  if (!defs.length) return Object.assign({}, r, { note });
 
   const parts = [];
   let c = 0;
@@ -677,8 +714,8 @@ function analyzeLine(line, pre, env) {
 
 /* ---------- Autocomplete ----------
    Only when the caret is at the end of a line, after 2+ letters.
-   After a number: units (days/weeks/months/years) then months.
-   Elsewhere: today/tomorrow/yesterday, weekdays, months. First match wins. */
+   After a number: units (days/weeks/months/years), then months, then your variables.
+   Elsewhere: today/tomorrow/yesterday, weekdays, months, then your variables. First match wins. */
 const SUG_REL = ['today', 'tomorrow', 'yesterday'];
 const SUG_WD = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const SUG_MON = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -703,9 +740,9 @@ function computeSuggestion() {
   let list;
   if (nm) {
     const one = parseFloat(nm[1].replace(/,/g, '')) === 1;
-    list = (one ? SUG_US : SUG_UP).concat(SUG_MON);
+    list = (one ? SUG_US : SUG_UP).concat(SUG_MON, knownVars);
   } else {
-    list = SUG_REL.concat(SUG_WD, SUG_MON);
+    list = SUG_REL.concat(SUG_WD, SUG_MON, knownVars);
   }
   const cand = list.find(c => c.length > word.length && c.startsWith(word));
   if (!cand) return null;
@@ -812,6 +849,8 @@ function process() {
   const text = input.value;
   const s0 = input.selectionStart, e0 = input.selectionEnd;
   const lines = text.split('\n');
+  relUsed = false;
+  todayLbl.textContent = 'Today: ' + fmtDate(todayDay());
 
   // Pass 1: collect variables from ALL lines (later definitions win, names case-insensitive)
   const pre = lines.map(parseDefs);
@@ -827,6 +866,7 @@ function process() {
   });
   const env = new Map();
   for (const [name, x] of info) env.set(name, x.value);
+  knownVars = [...info.keys()];
 
   // Pass 2: evaluate every line with the full variable set
   const out = [], views = [];
@@ -847,6 +887,7 @@ function process() {
     input.setSelectionRange(ns ?? newText.length, ne ?? newText.length);
   }
   lastViews = views;
+  lastRelUsed = relUsed;
   currentSug = computeSuggestion();
   autoGrow();
   renderOverlay(views, currentSug);
@@ -954,14 +995,39 @@ input.addEventListener('blur', () => { focused = false; process(); });
 commaToggle.addEventListener('change', () => { commaStyle.disabled = !commaToggle.checked; process(); });
 commaStyle.addEventListener('change', process);
 decSel.addEventListener('change', process);
+factToggle.addEventListener('change', process);
 window.addEventListener('resize', process);
 
-/* If the page stays open past midnight, refresh so today/tomorrow/weekday results move */
+/* ---------- Day change while the page stays open ----------
+   Checked every 30 s, and immediately when the tab becomes visible / focused again
+   (covers sleep and background throttling). If the sheet uses today/tomorrow/yesterday/
+   weekday words, everything is recalculated and a banner explains why. */
 let lastToday = todayDay();
-setInterval(() => {
+
+function showNotice() {
+  dayNotice.textContent = '';
+  const sp = document.createElement('span');
+  sp.textContent = 'Day changed: today is now ' + fmtDate(todayDay()) +
+    '. Results using today, tomorrow, yesterday or weekday names were recalculated.';
+  const b = document.createElement('button');
+  b.textContent = 'Dismiss';
+  b.addEventListener('click', () => dayNotice.classList.remove('show'));
+  dayNotice.appendChild(sp);
+  dayNotice.appendChild(b);
+  dayNotice.classList.add('show');
+}
+
+function checkDay() {
   const t = todayDay();
-  if (t !== lastToday) { lastToday = t; process(); }
-}, 30000);
+  if (t !== lastToday) {
+    lastToday = t;
+    if (lastRelUsed) showNotice();
+    process();
+  }
+}
+setInterval(checkDay, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDay(); });
+window.addEventListener('focus', checkDay);
 
 focused = document.activeElement === input;
 process();
