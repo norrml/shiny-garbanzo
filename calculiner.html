@@ -60,6 +60,7 @@
   .def { color: var(--red); }
   .dt  { color: var(--green); }
   .cm  { color: var(--comment); }
+  .ig  { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: .75; }
   .gh { position: absolute; line-height: 32px; white-space: pre; color: var(--ghost); }
 
   .vars { width: min(760px,100%); margin-top: 10px; font-size: 13px; color: var(--ghost);
@@ -112,7 +113,7 @@
     <span class="probe" id="probe"></span>
     <div class="overlay" id="overlay"></div>
     <textarea id="input" spellcheck="false" autofocus
-      placeholder="Try:  3+ 5  ·  200 + 10%  ·  v=1.5 then 2v  ·  today + 2 weeks  ·  3+4 ; 5*2  ·  # a comment line"></textarea>
+      placeholder="Try:  3+ 5  ·  200 + 10%  ·  v=1.5 then 2v  ·  today + 2 weeks  ·  30+4 2+3  ·  3+4 ; 5*2  ·  # comment"></textarea>
   </div>
 
   <div class="vars" id="vars"></div>
@@ -120,23 +121,23 @@
   <details class="summary" id="help" open>
     <summary>What Calculiner does (click to fold)</summary>
     <ul>
-      <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately. Long lines use the full box width before wrapping.</li>
-      <li><b>Colours.</b> <span class="gr">Green</span> = a date word or date result the app recognised. <span class="b">Blue</span> = a locked number result. <span class="r">Red</span> = a variable (its definition and wherever you use it). <span class="g">Grey</span> = live results, suggestions and notes. <span class="c">Light grey</span> = text the app detected and ignored (comments).</li>
+      <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing around operators doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately. Long lines use the full box width before wrapping.</li>
+      <li><b>Colours.</b> <span class="gr">Green</span> = a date word or date result the app recognised. <span class="b">Blue</span> = a locked number result. <span class="r">Red</span> = a variable (its definition and wherever you use it). <span class="g">Grey</span> = live results, suggestions and notes. <span class="c">Light grey</span> = text the app detected and ignored (comments). <s>Strikethrough</s> = a calculation you left unlocked and moved on from.</li>
       <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code>. Multiplication is <code>*</code> only (the × sign is not supported). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
       <li><b>Factorials.</b> Off by default. Tick "Factorials (!)" to allow <code>5!</code> (whole numbers 0 to 170). While off, a line containing <code>5!</code> shows no result and a grey note explains why. Factorials work with separators, locking and variables like any other calculation.</li>
-      <li><b>Several calculations on one line.</b> A <code>;</code> anywhere starts a new, independent calculation, and typing it locks the result before it: <code>3+4;5*2</code> becomes <code>3+4=7;5*2</code> with a grey result for the last one. A <b>space after a locked result</b> also starts a new calculation: <code>3+4=7 5*2</code>. A space after a result followed by an operator is still a chain (<code>=7 +5</code>); to start a calculation with a minus sign, use <code>;</code>. A space is only a separator after a locked result; <code>5 6</code> is not two calculations. Only the last calculation on a line shows a live grey result. You can define variables after a <code>;</code>: <code>3+4; v=5</code>.</li>
-      <li><b>Comments.</b> Words the app ignores (like <code>rent</code> in <code>rent 500 + 200</code>), words with digits in them (<code>v99t</code>), and ignored variable names turn <span class="c">light grey</span>. A line starting with <code>#</code> is ignored completely. A <code>#</code> in the middle of a line is just ignored punctuation.</li>
+      <li><b>Several calculations on one line.</b> A <code>;</code> starts a new calculation straight away. A <b>space</b> also starts a new one when a number, bracket or date follows a finished number, bracket or date with no operator between them (<code>30+4 2+3</code>, <code>today tomorrow</code>). Spaces around operators (<code>3 + 4</code>) change nothing, and <code>2 v</code> with a variable still multiplies. Only the <b>last</b> calculation on a line shows the live grey result and can be locked. Any earlier calculation you didn't lock with <code>=</code>, Tab or Enter is treated as ignored and shown <s>struck through</s>, with no result. Bare numbers are never struck (<code>5 6</code> is just two numbers). After a locked result, a space followed by a new calculation starts a new one (<code>3+4=7 5*2</code>); a space followed by an operator continues the chain (<code>3+4=7 +5</code>); to begin a new calculation with a minus sign, use <code>;</code>. A trailing space keeps the grey result of what you just typed (<code>30+4 </code> still shows <span class="g">=34</span>).</li>
+      <li><b>Comments.</b> A <code>#</code> anywhere starts a comment that runs to the end of the line, shown <span class="c">light grey</span> and ignored. Words the app ignores inside a calculation (like <code>rent</code> in <code>rent 500 + 200</code>), words with digits (<code>v99t</code>) and ignored variable names are light grey too. The grey result of a line with a comment appears after the comment. Inside a comment, Tab does nothing, Enter makes a plain new line, and <code>=</code> is just a character.</li>
       <li><b>Dates.</b> Use <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekday names, or a date with a month name: <code>26 oct</code>, <code>26 oct 2026</code>, <code>oct 26</code>, <code>26th October</code> (no year = this year). Weekdays: <code>friday</code> = the first Friday after today; <code>next friday</code> = Friday of <i>next week</i> (weeks run Monday to Sunday); <code>last friday</code> = the most recent Friday before today. Add or subtract whole <b>days, weeks, months, years</b>: <code>today + 2 weeks</code>, <code>tomorrow - 3 days</code>, <code>next friday + 1 month</code>. Two dates subtracted give the days between. A weekday written next to a full date (<code>Fri 6 Nov</code>) is just a label. Month maths stops at month end (31 Jan + 1 month = 28 Feb). Numeric dates like 26/10/2026 are not supported. Dates can't be stored in variables.</li>
       <li><b>Leaving the page open.</b> The app checks the date every 30 seconds, and when you return to the tab. If the day changes, results that use today, tomorrow, yesterday or weekday names are recalculated automatically (locked ones too) and a banner tells you. Dates you typed out in full never change. The toolbar shows the date the app is using.</li>
-      <li><b>Autocomplete.</b> When you type 2+ letters at the end of a line, the rest appears in grey: <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekdays, months, and <b>your own variable names</b> (date words are checked first). Press <code>Tab</code> or <code>→</code> to accept. After a number it suggests <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code> instead (<code>mo</code> becomes months, not Monday). After a locked result and a space, you're starting a new calculation, so normal suggestions apply. While a suggestion shows, the result on that line is hidden and Enter makes a plain new line.</li>
+      <li><b>Autocomplete.</b> When you type 2+ letters at the end of a line, the rest appears in grey: <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekdays, months, and <b>your own variable names</b> (date words are checked first). Press <code>Tab</code> or <code>→</code> to accept. After a number it suggests <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code> instead (<code>mo</code> becomes months, not Monday). After a locked result and a space, you're starting a new calculation, so normal suggestions apply. No suggestions inside a comment. While a suggestion shows, the result on that line is hidden and Enter makes a plain new line.</li>
       <li><b>Unfinished input.</b> <code>39+1+</code> still shows <span class="g">=40</span>, and open brackets are closed for you.</li>
-      <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code> (when no suggestion is showing), or press <code>Enter</code>. The answer turns blue (or green for dates). Enter also starts a new line, but only if the line has something to calculate. <code>Shift+Enter</code> always gives a plain new line. <code>=</code> and <code>Tab</code> are ignored when there is nothing new to lock (right after a result, on an empty line, or right after <code>;</code>), so you can't duplicate a result. Keep typing an operator after a locked result to continue from it (<code>today=</code> then <code>+ 3 days</code>). Edit anything earlier and the locked results update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a locked result; type a space or an operator first.</li>
-      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>; later uses of the name are red too. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 rr=2 dd=4</code> or <code>v=1 ; rr=2</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5, and <code>today + n days</code> works. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come first in its line or after a <code>;</code>.</li>
+      <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code> (when no suggestion is showing), or press <code>Enter</code>. The last calculation's answer turns blue (or green for dates). Enter also starts a new line, but only if the line has a live result and the caret is not inside a comment. <code>Shift+Enter</code> always gives a plain new line. <code>=</code> and <code>Tab</code> are ignored when there is nothing new to lock (right after a result, on an empty line, or right after <code>;</code>), so you can't duplicate a result. Keep typing an operator after a locked result to continue from it (<code>today=</code> then <code>+ 3 days</code>). Edit anything earlier and the locked results update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a locked result; type a space or an operator first.</li>
+      <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>; later uses of the name are red too. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 rr=2 dd=4</code> or <code>v=1 ; rr=2</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5, and <code>today + n days</code> works. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come first in its line or after a <code>;</code>, and a variable definition is never struck through.</li>
       <li><b>Reserved words can't be variables.</b> A variable with one of these names is ignored: a grey note appears on the line and it shows dimmed in the variable list. (Typing <code>today=</code> or <code>sun=</code> locks the date instead, since <code>=</code> means lock.) Reserved: <span id="resList"></span></li>
       <li><b>Variable list.</b> Every detected variable and its value is shown under the box. A name defined more than once is flagged in red with the line that wins. Ignored names appear dimmed.</li>
       <li><b>Saving.</b> Everything you type and your settings are saved automatically in this browser (the toolbar shows when). It is <b>not a backup</b>: clearing browser data, a private window, or moving the file (in some browsers) loses it. <code>Clear</code> deletes the sheet and its saved copy after asking.</li>
       <li><b>Popup window.</b> "Open in popup" opens Calculiner in its own small window. It can't stay on top of other windows (browsers don't allow that). The popup and the main window share the same saved sheet and stay in sync; type in one at a time.</li>
-      <li><b>Comments in calculations.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. A weekday word (<code>sat</code>, <code>sun</code>, <code>wed</code>, <code>mon</code> ...) anywhere is read as a date, and a month word next to a day number (<code>mar 5</code>) is too. A 4-digit number right after a day and month is read as the year.</li>
+      <li><b>Comment words in calculations.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. A weekday word (<code>sat</code>, <code>sun</code>, <code>wed</code>, <code>mon</code> ...) anywhere is read as a date, and a month word next to a day number (<code>mar 5</code>) is too. A 4-digit number right after a day and month is read as the year.</li>
       <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each locked result carries forward exactly as shown.</li>
       <li><b>Commas in results.</b> Off by default. Choose International (1,234,567), Indian (12,34,567) or East Asian (123,4567).</li>
       <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials, impossible dates (31 Feb) and malformed lines show no result, so you never see a wrong number.</li>
@@ -191,7 +192,7 @@ function saveSettings() {
     }));
   } catch (e) { storageOk = false; showSave(); }
 }
-function showSave(ok) {
+function showSave() {
   if (!storageOk) {
     saveLbl.textContent = 'Autosave unavailable (browser blocked storage)';
     saveLbl.className = 'saved err';
@@ -619,28 +620,47 @@ function evalDate(tokens) {
 }
 
 /* ---------- Line model ----------
-   line   = chunks separated by ";"
+   line   = code [# comment]
+   code   = chunks separated by ";"
    chunk  = [variable definitions] + tail
-   tail   = units; a unit ends after a locked result when a space + a new calculation follows
-   unit   = expr0 = R1 expr1 = R2 expr2 ...   (a chain)
+   tail   = units; a unit is a chain  expr0 = R1 expr1 = R2 expr2 ...
+   A new unit starts (a) after a locked result when a space + a new calculation follows, and
+   (b) wherever a finished operand is followed, after a space, by another operand (no operator).
    R_k (the locked result after each "=") is app-managed and always equals the value of
-   everything before it in its unit. A result is a number, a date or a day count. */
+   everything before it in its unit. Only the last unit of the last chunk is "active"
+   (live result, can be locked); earlier unlocked calculations are shown struck through. */
 const RUN_RE = new RegExp(
   '^(?:(?:' + WD.join('|') + '), \\d{1,2} (?:' + MON.join('|') + ') \\d{4}' +
   '|-?\\d[\\d,]*(?:\\.\\d+)?(?:e[+-]\\d+)?(?: days?(?!\\p{L}))?)', 'iu');
 const NEWCALC_RE = /^\s+(?=[\d(]|\.\d|\p{L})/u;
 
-function splitParts(text, spans) {
+/* Split text into coloured parts. strike = [a, b) range to mark as ignored (struck through). */
+function splitParts(text, spans, strike) {
   const out = [];
+  const push = (s, e, cls) => {
+    if (e <= s) return;
+    if (!strike) { out.push({ text: text.slice(s, e), cls }); return; }
+    const a = strike[0], b = strike[1];
+    const segs = [[s, Math.min(e, a), false], [Math.max(s, a), Math.min(e, b), true], [Math.max(s, b), e, false]];
+    for (const g of segs) {
+      if (g[1] > g[0]) out.push({ text: text.slice(g[0], g[1]), cls: g[2] ? (cls ? cls + ' ig' : 'ig') : cls });
+    }
+  };
   let c = 0;
   for (const sp of spans) {
     if (sp.s < c) continue;
-    if (sp.s > c) out.push({ text: text.slice(c, sp.s), cls: '' });
-    out.push({ text: text.slice(sp.s, sp.e), cls: sp.cls });
+    push(c, sp.s, '');
+    push(sp.s, sp.e, sp.cls);
     c = sp.e;
   }
-  if (c < text.length) out.push({ text: text.slice(c), cls: '' });
+  push(c, text.length, '');
   return out;
+}
+
+function coreRange(t) {
+  const a = t.search(/\S/);
+  if (a < 0) return null;
+  return [a, t.replace(/\s+$/, '').length];
 }
 
 /* Concatenate per-piece results. rawLens = original length of each piece. */
@@ -664,34 +684,80 @@ function composeList(res, rawLens, sep) {
   return { text, parts, runs, map, ghost: last ? last.ghost : null };
 }
 
-/* Split a tail into units: after a locked result, whitespace followed by something that
-   starts a new calculation (digit, bracket, letter) begins a new unit. */
-function splitUnits(T) {
+/* Offsets (inside `text`) where a new calculation starts: after a finished operand, when
+   another operand follows after a gap (space / comment word) with no operator between,
+   and we're not inside brackets. */
+function findBreaks(text, env) {
+  let toks;
+  try { toks = groupDates(tokenize(text)); } catch (e) { return []; }
+  const seq = [];
+  for (const t of toks) {
+    if (t.t === 'junk') continue;
+    if (t.t === 'word') {
+      const last = seq[seq.length - 1];
+      if (env.has(t.name)) {
+        if (last && (last.t === 'num' || last.t === ')')) seq.push({ t: '*' });
+        seq.push({ t: 'num', s: t.s, e: t.e });
+      } else if (UNITS.has(t.name) && last && last.t === 'num') {
+        seq.push({ t: 'unit', s: t.s, e: t.e });
+      }
+      continue;
+    }
+    seq.push(t);
+  }
+  const isEnd = t => ['num', 'date', 'bad', 'unit', ')', '%', '!'].includes(t.t);
+  const isStart = t => ['num', 'date', 'bad', '('].includes(t.t);
+  const breaks = [];
+  let depth = 0;
+  for (let i = 0; i < seq.length; i++) {
+    const b = seq[i];
+    if (i > 0) {
+      const a = seq[i - 1];
+      if (depth === 0 && isEnd(a) && isStart(b) && a.e !== undefined && b.s !== undefined && b.s > a.e) {
+        breaks.push(a.e);
+      }
+    }
+    if (b.t === '(') depth++;
+    else if (b.t === ')') depth--;
+  }
+  return breaks;
+}
+
+function splitUnits(T, env) {
   const pieces = T.split('=');
   const units = [];
-  let cur = { start: 0, exprs: [pieces[0]], runsOld: [''] };
-  let pos = pieces[0].length + 1;
-  for (let k = 1; k < pieces.length; k++) {
-    const piece = pieces[k];
-    const m = piece.match(RUN_RE);
-    const run = m ? m[0] : '';
-    const rest = piece.slice(run.length);
-    if (run && NEWCALC_RE.test(rest)) {
-      cur.exprs.push(''); cur.runsOld.push(run);
-      cur.end = pos + run.length;
-      units.push(cur);
-      cur = { start: pos + run.length, exprs: [rest], runsOld: [''] };
-    } else {
-      cur.exprs.push(rest); cur.runsOld.push(run);
+  let cur = null, pos = 0;
+  const begin = start => { cur = { start, exprs: [], runsOld: [] }; units.push(cur); };
+
+  for (let i = 0; i < pieces.length; i++) {
+    let run = '', rest = pieces[i];
+    if (i > 0) {
+      const m = rest.match(RUN_RE);
+      run = m ? m[0] : '';
+      rest = rest.slice(run.length);
     }
-    pos += piece.length + 1;
+    const restStart = pos + run.length;
+    let contRun = null;                    // set when the first fragment continues the current chain
+    if (i === 0) begin(0);
+    else if (run && NEWCALC_RE.test(rest)) {
+      cur.runsOld.push(run); cur.exprs.push('');
+      cur.end = restStart;
+      begin(restStart);
+    } else contRun = run;
+
+    const cuts = [0].concat(findBreaks(rest, env), [rest.length]);
+    for (let f = 0; f < cuts.length - 1; f++) {
+      if (f > 0) { cur.end = restStart + cuts[f]; begin(restStart + cuts[f]); }
+      cur.runsOld.push(f === 0 && contRun !== null ? contRun : '');
+      cur.exprs.push(rest.slice(cuts[f], cuts[f + 1]));
+    }
+    pos += pieces[i].length + 1;
   }
   cur.end = T.length;
-  units.push(cur);
   return units;
 }
 
-function analyzeUnit(u, env, strict, autoLock) {
+function analyzeUnit(u, env, strict, active) {
   const raw = u.raw;
   let firstB = null, firstLen;
   try { firstB = build(u.exprs[0], env, null); firstLen = firstB.toks.length; } catch (e) { firstLen = 1; }
@@ -699,10 +765,11 @@ function analyzeUnit(u, env, strict, autoLock) {
     return { text: raw, parts: splitParts(raw, firstB.spans), ghost: null, map: c => c, runs: [] };
   }
 
-  const exprs = u.exprs.slice(), runsOld = u.runsOld.slice();
+  const exprs = u.exprs, runsOld = u.runsOld;
+  const n = exprs.length;
   const vals = [], ghostable = [], spans = [];
   let ok = true;
-  for (let j = 0; j < exprs.length; j++) {
+  for (let j = 0; j < n; j++) {
     const prev = j > 0 ? vals[j - 1] : null;
     let b = null;
     try { b = (j === 0 && firstB) ? firstB : build(exprs[j], env, prev); } catch (e) { b = null; }
@@ -729,11 +796,9 @@ function analyzeUnit(u, env, strict, autoLock) {
     vals.push(v); ghostable.push(g);
   }
 
-  // A calculation followed by ";" locks itself
-  let n = exprs.length;
-  if (autoLock && vals[n - 1] !== null && ghostable[n - 1]) {
-    exprs.push(''); runsOld.push(''); vals.push(vals[n - 1]); ghostable.push(false); spans.push([]); n++;
-  }
+  const L = n - 1;
+  // An unlocked calculation that you moved on from is "ignored": strike it through
+  const strike = (!active && vals[L] !== null && ghostable[L]) ? coreRange(exprs[L]) : null;
 
   let text = '';
   const parts = [], ents = [], runs = [];
@@ -753,13 +818,12 @@ function analyzeUnit(u, env, strict, autoLock) {
     }
     const n0 = text.length;
     text += exprs[j];
-    for (const p of splitParts(exprs[j], spans[j])) parts.push(p);
+    for (const p of splitParts(exprs[j], spans[j], j === L ? strike : null)) parts.push(p);
     ents.push({ k: 'expr', o0: o, o1: o + exprs[j].length, n0 });
     o += exprs[j].length;
   }
 
-  const L = n - 1;
-  const ghost = (vals[L] !== null && ghostable[L]) ? '=' + fmtVal(vals[L]) : null;
+  const ghost = (active && vals[L] !== null && ghostable[L]) ? '=' + fmtVal(vals[L]) : null;
 
   const map = c => {
     for (const e of ents) {
@@ -771,11 +835,11 @@ function analyzeUnit(u, env, strict, autoLock) {
   return { text, parts, ghost, map, runs };
 }
 
-function analyzeTail(T, env, strict, autoLock) {
-  const units = splitUnits(T);
+function analyzeTail(T, env, strict, isLast) {
+  const units = splitUnits(T, env);
   const res = units.map((u, i) => {
     u.raw = T.slice(u.start, u.end);
-    return analyzeUnit(u, env, strict && i === 0, autoLock && i === units.length - 1);
+    return analyzeUnit(u, env, strict && i === 0, isLast && i === units.length - 1);
   });
   return composeList(res, units.map(u => u.end - u.start), '');
 }
@@ -817,13 +881,13 @@ function parseDefs(chunk) {
   return { defs, pos, blocked };
 }
 
-const isCommentLine = l => /^\s*#/.test(l);
-const plainRes = t => ({ text: t, parts: [{ text: t, cls: '' }], ghost: null, map: c => c, runs: [] });
+const codeOf = l => { const i = l.indexOf('#'); return i < 0 ? l : l.slice(0, i); };
+const plainRes = t => ({ text: t, parts: t ? [{ text: t, cls: '' }] : [], ghost: null, map: c => c, runs: [] });
 
-function analyzeChunk(raw, pre, env, autoLock) {
+function analyzeChunk(raw, pre, env, isLast) {
   const { defs, pos, blocked } = pre;
   const tail = raw.slice(pos);
-  const r = blocked ? plainRes(tail) : analyzeTail(tail, env, defs.length > 0, autoLock);
+  const r = blocked ? plainRes(tail) : analyzeTail(tail, env, defs.length > 0, isLast);
 
   const notes = [];
   const bad = [...new Set(defs.filter(d => d.reason === 'reserved').map(d => '"' + d.name + '"'))];
@@ -850,23 +914,36 @@ function analyzeChunk(raw, pre, env, autoLock) {
 }
 
 function analyzeLine(line, preChunks, env) {
-  if (isCommentLine(line)) {
-    return { text: line, parts: [{ text: line, cls: 'cm' }], ghost: null, note: null, map: c => c, runs: [] };
+  const code = codeOf(line);
+  const comment = line.slice(code.length);
+  const withComment = comp => {
+    if (!comment) return comp;
+    const base = comp.text.length;
+    return Object.assign({}, comp, {
+      text: comp.text + comment,
+      parts: comp.parts.concat([{ text: comment, cls: 'cm' }]),
+      map: c => (c <= code.length ? comp.map(c) : base + (c - code.length))
+    });
+  };
+
+  if (/^\s*$/.test(code)) {
+    return withComment({ text: code, parts: code ? [{ text: code, cls: '' }] : [], ghost: null, note: null, map: c => c, runs: [] });
   }
-  const chunks = line.split(';');
-  const res = chunks.map((c, i) => analyzeChunk(c, preChunks[i], env, i < chunks.length - 1));
+
+  const chunks = code.split(';');
+  const res = chunks.map((c, i) => analyzeChunk(c, preChunks[i], env, i === chunks.length - 1));
   const comp = composeList(res, chunks.map(c => c.length), ';');
 
   const notes = [];
   for (const r of res) for (const n of r.notes) if (!notes.includes(n)) notes.push(n);
-  if (!factOn() && /[\d)]\s*!/.test(line)) notes.push('factorials are off (switch on above)');
-  if (line.includes('×')) notes.push('× is not supported, use *');
+  if (!factOn() && /[\d)]\s*!/.test(code)) notes.push('factorials are off (switch on above)');
+  if (code.includes('×')) notes.push('× is not supported, use *');
   comp.note = notes.length ? notes.join('   ') : null;
-  return comp;
+  return withComment(comp);
 }
 
 /* ---------- Autocomplete ----------
-   Only when the caret is at the end of a line, after 2+ letters.
+   Only when the caret is at the end of a line (and not in a comment), after 2+ letters.
    After a number: units (days/weeks/months/years), then months, then your variables.
    Elsewhere: today/tomorrow/yesterday, weekdays, months, then your variables. First match wins.
    After a locked result + space, you are starting a new calculation, so no unit mode. */
@@ -884,7 +961,7 @@ function computeSuggestion() {
   if (s < text.length && text[s] !== '\n') return null;
   const head = text.slice(0, s);
   const before = head.slice(head.lastIndexOf('\n') + 1);
-  if (/^\s*#/.test(before)) return null;
+  if (before.includes('#')) return null;
   const m = before.match(/(\p{L}+)$/u);
   if (!m || m[1].length < 2) return null;
   const prefix = before.slice(0, before.length - m[1].length);
@@ -1005,7 +1082,9 @@ function autoGrow() {
   input.style.height = input.scrollHeight + 'px';
 }
 
-function process() {
+function process() { pass(0); }
+
+function pass(depth) {
   const text = input.value;
   const s0 = input.selectionStart, e0 = input.selectionEnd;
   const lines = text.split('\n');
@@ -1013,7 +1092,7 @@ function process() {
   todayLbl.textContent = 'Today: ' + fmtDate(todayDay());
 
   // Pass 1: collect variables from ALL lines and chunks (later definitions win, names case-insensitive)
-  const pre = lines.map(l => isCommentLine(l) ? [] : l.split(';').map(parseDefs));
+  const pre = lines.map(l => codeOf(l).split(';').map(parseDefs));
   const info = new Map();           // name -> {value, n, line}
   const ignored = new Map();        // name -> reason
   pre.forEach((chunkDefs, i) => {
@@ -1047,6 +1126,7 @@ function process() {
   if (newText !== text) {
     input.value = newText;
     input.setSelectionRange(ns ?? newText.length, ne ?? newText.length);
+    if (depth < 2) return pass(depth + 1);          // text changed (e.g. a new result was written): re-run so the display catches up
   }
   lastViews = views;
   lastRelUsed = relUsed;
@@ -1058,6 +1138,13 @@ function process() {
 }
 
 /* ---------- Keyboard behaviour ---------- */
+
+/* Is the caret inside a "#" comment on its line? */
+function inComment(pos) {
+  const text = input.value;
+  const ls = text.slice(0, pos).lastIndexOf('\n') + 1;
+  return text.slice(ls, pos).includes('#');
+}
 
 /* Is there anything new to lock at this caret position?
    dup = true when a result is already locked here with nothing new typed after it,
@@ -1081,9 +1168,7 @@ function lockState(pos) {
 function insertEq() {
   const s = input.selectionStart, en = input.selectionEnd;
   if (s === en) {
-    const text = input.value;
-    const ls = text.slice(0, s).lastIndexOf('\n') + 1;
-    if (/^\s*#/.test(text.slice(ls, s))) return;           // comment line: nothing to lock
+    if (inComment(s)) return;                              // comment: nothing to lock
     const st = lockState(s);
     if (st.dup) {
       if (st.moveTo !== null) input.setSelectionRange(st.moveTo, st.moveTo);
@@ -1123,11 +1208,13 @@ input.addEventListener('keydown', e => {
   }
 
   /* Enter = lock the result (like "=") and start a new line.
-     Plain new line if: a suggestion is showing, nothing to calculate, cursor not at line end, or Shift held. */
+     Plain new line if: a suggestion is showing, caret in a comment, nothing to calculate,
+     cursor not at line end, or Shift held. */
   if (e.key === 'Enter' && !e.shiftKey) {
     if (sugReady()) return;
     const s = input.selectionStart, en = input.selectionEnd, text = input.value;
     if (s !== en) return;
+    if (inComment(s)) return;
     const atLineEnd = s === text.length || text[s] === '\n';
     const idx = text.slice(0, s).split('\n').length - 1;
     const v = lastViews[idx];
@@ -1140,12 +1227,12 @@ input.addEventListener('keydown', e => {
 });
 
 /* "=" + result behave as one unit when deleting; typing starts after the result;
-   a typed "=" with nothing new to lock is ignored */
+   a typed "=" with nothing new to lock is ignored (but is literal inside a comment) */
 input.addEventListener('beforeinput', e => {
   const t = e.inputType || '';
   const s = input.selectionStart, en = input.selectionEnd;
 
-  if (t === 'insertText' && e.data === '=' && s === en) {
+  if (t === 'insertText' && e.data === '=' && s === en && !inComment(s)) {
     const st = lockState(s);
     if (st.dup) {
       e.preventDefault();
