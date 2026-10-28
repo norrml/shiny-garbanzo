@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calculiner</title>
+<title>Calculiner v1.0</title>
 <style>
-  :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --comment:#b4b4b4; --border:#d4d4d4; --blue:#2563eb; --red:#dc2626; --green:#16a34a; --band:rgba(0,0,0,.035); }
+  :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --comment:#b4b4b4; --border:#d4d4d4; --blue:#2563eb; --red:#dc2626; --green:#16a34a; --band:rgb(0 0 0 / 2%); --codebg:rgba(0,0,0,.035); }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#1b1b1b; --fg:#eaeaea; --ghost:#777; --comment:#6a6a6a; --border:#3a3a3a; --blue:#5b9dff; --red:#ff6b6b; --green:#4ade80; --band:rgba(255,255,255,.04); }
+    :root { --bg:#1b1b1b; --fg:#eaeaea; --ghost:#777; --comment:#6a6a6a; --border:#3a3a3a; --blue:#5b9dff; --red:#ff6b6b; --green:#4ade80; --band:rgb(255 255 255 / 2%); --codebg:rgba(255,255,255,.04); }
   }
   body {
     background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif;
@@ -15,6 +15,7 @@
   }
   body.popup { padding: 12px 10px 28px; }
   h1 { font-size: 14px; font-weight: 500; color: var(--ghost); margin: 0 0 12px; letter-spacing: .04em; }
+  h1 .ver { font-size: 11px; font-weight: 400; letter-spacing: 0; margin-left: 6px; opacity: .8; }
   .bar { width: min(760px,100%); display: flex; gap: 10px 14px; align-items: center;
          margin-bottom: 10px; font-size: 13px; color: var(--ghost); flex-wrap: wrap; }
   .bar select, .bar button { font: inherit; background: var(--bg); color: var(--fg);
@@ -30,7 +31,8 @@
   .notice.show { display: flex; }
   .notice button { font: inherit; background: none; border: 1px solid var(--border); color: var(--fg);
                    border-radius: 6px; padding: 2px 8px; cursor: pointer; }
-  .box { position: relative; width: min(760px,100%); border: 1px solid var(--border);
+  .box { --pt: 8px; --pb: 8px;
+         position: relative; width: min(760px,100%); border: 1px solid var(--border);
          border-radius: 10px; overflow: hidden; }
 
   .box textarea, .overlay, .probe {
@@ -41,13 +43,13 @@
     box-sizing: border-box; width: 100%; margin: 0; border: 0;
     white-space: break-spaces; word-break: break-all;
   }
-  .box textarea { padding: 16px 16px 56px 16px; }
-  .overlay { position: absolute; inset: 0; padding: 16px 0 56px 0; overflow: hidden;
+  .box textarea { padding: var(--pt) 16px var(--pb) 16px; }
+  .overlay { position: absolute; inset: 0; padding: var(--pt) 0 var(--pb) 0; overflow: hidden;
              pointer-events: none; user-select: none; }
   .probe { position: absolute; left: 0; top: 0; visibility: hidden; white-space: pre; display: inline-block; }
 
   textarea {
-    display: block; position: relative; z-index: 1; min-height: 60vh;
+    display: block; position: relative; z-index: 1; min-height: 240px;
     background: transparent; color: transparent; caret-color: var(--fg);
     resize: none; outline: none; overflow: hidden;
   }
@@ -77,7 +79,7 @@
   details.summary > summary { cursor: pointer; font-size: 14px; font-weight: 600; padding: 2px 0; }
   details.summary ul { margin: 8px 0 4px; padding-left: 20px; }
   details.summary li { margin-bottom: 5px; }
-  .summary code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--band);
+  .summary code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--codebg);
                   padding: 1px 5px; border-radius: 4px; }
   .summary .r { color: var(--red); } .summary .b { color: var(--blue); }
   .summary .g { color: var(--ghost); } .summary .gr { color: var(--green); } .summary .c { color: var(--comment); }
@@ -85,7 +87,7 @@
 </style>
 </head>
 <body>
-  <h1>CALCULINER</h1>
+  <h1>CALCULINER<span class="ver">v1.0</span></h1>
 
   <div class="bar">
     <label><input type="checkbox" id="commaToggle"> Commas in results</label>
@@ -109,7 +111,7 @@
 
   <div class="notice" id="dayNotice"></div>
 
-  <div class="box">
+  <div class="box" id="box">
     <span class="probe" id="probe"></span>
     <div class="overlay" id="overlay"></div>
     <textarea id="input" spellcheck="false" autofocus
@@ -147,6 +149,7 @@
 <script>
 /* ---------- Elements ---------- */
 const input = document.getElementById('input');
+const box = document.getElementById('box');
 const overlay = document.getElementById('overlay');
 const probe = document.getElementById('probe');
 const varsBox = document.getElementById('vars');
@@ -167,7 +170,7 @@ const isPopup = location.hash === '#popup';
 if (isPopup) {
   popBtn.style.display = 'none';
   document.body.classList.add('popup');
-  document.title = 'Calculiner (popup)';
+  document.title = 'Calculiner v1.0 (popup)';
 }
 
 /* ---------- Saving (autosave to this browser) ---------- */
@@ -233,6 +236,7 @@ help.addEventListener('toggle', () => {
 });
 
 const LINE_H = 32, PAD = 16;
+const PB_NORMAL = '8px', PB_EXTRA = '40px';     // bottom padding; extra only when a result needs its own row
 let lastRuns = [];      // absolute positions of every "=" + its managed result
 let lastViews = [];     // per-line analysis of the current text
 let currentSug = null;  // active autocomplete suggestion
@@ -995,6 +999,7 @@ function metrics() {
 
 function renderOverlay(views, sug) {
   const { charW, cols } = metrics();
+  let needExtra = false;                       // last line's result/note had to drop onto its own row
   overlay.textContent = '';
   views.forEach((r, i) => {
     const row = document.createElement('div');
@@ -1035,12 +1040,16 @@ function renderOverlay(views, sug) {
       if (baseCol + gap + tail.length <= cols) place(tail, baseCol + gap, rows - 1);
       else if (!sugShown) {
         const next = views[i + 1];
-        if (!next || next.text.trim() === '') place(tail, 0, rows);
+        if (!next || next.text.trim() === '') {
+          place(tail, 0, rows);
+          if (i === views.length - 1) needExtra = true;
+        }
         /* else: no room and the next row is occupied -> hide rather than overlap */
       }
     }
     overlay.appendChild(row);
   });
+  box.style.setProperty('--pb', needExtra ? PB_EXTRA : PB_NORMAL);
 }
 
 function renderVars(info, ignored) {
@@ -1131,8 +1140,8 @@ function pass(depth) {
   lastViews = views;
   lastRelUsed = relUsed;
   currentSug = computeSuggestion();
+  renderOverlay(views, currentSug);                 // sets the bottom padding, so size the box after it
   autoGrow();
-  renderOverlay(views, currentSug);
   renderVars(info, ignored);
   scheduleSave();
 }
