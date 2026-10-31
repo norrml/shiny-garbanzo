@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calculiner v1.0</title>
+<title>Calculiner v1.4</title>
 <style>
   :root { --bg:#fff; --fg:#1a1a1a; --ghost:#9a9a9a; --comment:#b4b4b4; --border:#d4d4d4; --blue:#2563eb; --red:#dc2626; --green:#16a34a; --band:rgb(0 0 0 / 2%); --codebg:rgba(0,0,0,.035); }
   @media (prefers-color-scheme: dark) {
@@ -87,7 +87,7 @@
 </style>
 </head>
 <body>
-  <h1>CALCULINER<span class="ver">v1.0</span></h1>
+  <h1>CALCULINER<span class="ver">v1.4</span></h1>
 
   <div class="bar">
     <label><input type="checkbox" id="commaToggle"> Commas in results</label>
@@ -115,7 +115,7 @@
     <span class="probe" id="probe"></span>
     <div class="overlay" id="overlay"></div>
     <textarea id="input" spellcheck="false" autofocus
-      placeholder="Try:  3+ 5  ·  200 + 10%  ·  v=1.5 then 2v  ·  today + 2 weeks  ·  30+4 2+3  ·  3+4 ; 5*2  ·  # comment"></textarea>
+      placeholder="Try:  3+ 5  ·  200 + 10%  ·  v=1.5 then 2v  ·  today + 3 we[Tab]  ·  27 mar 2027 - today days-to-months  ·  # comment"></textarea>
   </div>
 
   <div class="vars" id="vars"></div>
@@ -124,25 +124,28 @@
     <summary>What Calculiner does (click to fold)</summary>
     <ul>
       <li><b>Live results.</b> Type any expression and the answer appears greyed out on the same line (<span class="g">=8</span>). Spacing around operators doesn't matter. Each Enter-line is its own calculation, and rows are shaded alternately. Long lines use the full box width before wrapping.</li>
-      <li><b>Colours.</b> <span class="gr">Green</span> = a date word or date result the app recognised. <span class="b">Blue</span> = a locked number result. <span class="r">Red</span> = a variable (its definition and wherever you use it). <span class="g">Grey</span> = live results, suggestions and notes. <span class="c">Light grey</span> = text the app detected and ignored (comments). <s>Strikethrough</s> = a calculation you left unlocked and moved on from.</li>
+      <li><b>Colours.</b> <span class="gr">Green</span> = a date word, date term, day/week/month/year unit, calendar function or date result the app recognised. <span class="b">Blue</span> = a locked number result. <span class="r">Red</span> = a variable (its definition and wherever you use it). <span class="g">Grey</span> = live results, suggestions and notes. <span class="c">Light grey</span> = text the app detected and ignored (comments). <s>Strikethrough</s> = a calculation you left unlocked and moved on from.</li>
+      <li><b>Keyboard.</b> <code>Enter</code> moves the cursor to the end of the <b>next line</b>; it never adds a line, and does nothing on the last line (or when there is only one line). <code>Shift+Enter</code> <b>adds a new line</b> and moves the cursor onto it; if the line has a live result it locks it first (like <code>=</code>). Pressed in a comment, on a text-only line or in the middle of a line, it is a plain new line. <code>Tab</code> = accept a suggestion, or lock the result when no suggestion is showing. <code>→</code> also accepts a suggestion. <b>Lines are only removed on purpose:</b> <code>Backspace</code> and <code>Delete</code> only ever remove <i>characters</i>. They never join or remove a line, even when your selection runs across several lines (the selected text is cleared and the lines stay). Use <code>Shift+Backspace</code> (or <code>Shift+Delete</code>) to remove a line break, or a selection together with its line breaks. Cut (<code>Ctrl+X</code>) and typing over a multi-line selection follow the same rule. These shortcuts are for a physical keyboard; phone keyboards can't do them reliably.</li>
       <li><b>Operators.</b> <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>÷</code> <code>( )</code> <code>%</code>. Multiplication is <code>*</code> only (the × sign is not supported). Percent is relative: <code>200+10%</code> = 220, <code>200-10%</code> = 180, and a lone <code>50%</code> = 0.5.</li>
       <li><b>Factorials.</b> Off by default. Tick "Factorials (!)" to allow <code>5!</code> (whole numbers 0 to 170). While off, a line containing <code>5!</code> shows no result and a grey note explains why. Factorials work with separators, locking and variables like any other calculation.</li>
-      <li><b>Several calculations on one line.</b> A <code>;</code> starts a new calculation straight away. A <b>space</b> also starts a new one when a number, bracket or date follows a finished number, bracket or date with no operator between them (<code>30+4 2+3</code>, <code>today tomorrow</code>). Spaces around operators (<code>3 + 4</code>) change nothing, and <code>2 v</code> with a variable still multiplies. Only the <b>last</b> calculation on a line shows the live grey result and can be locked. Any earlier calculation you didn't lock with <code>=</code>, Tab or Enter is treated as ignored and shown <s>struck through</s>, with no result. Bare numbers are never struck (<code>5 6</code> is just two numbers). After a locked result, a space followed by a new calculation starts a new one (<code>3+4=7 5*2</code>); a space followed by an operator continues the chain (<code>3+4=7 +5</code>); to begin a new calculation with a minus sign, use <code>;</code>. A trailing space keeps the grey result of what you just typed (<code>30+4 </code> still shows <span class="g">=34</span>).</li>
-      <li><b>Comments.</b> A <code>#</code> anywhere starts a comment that runs to the end of the line, shown <span class="c">light grey</span> and ignored. Words the app ignores inside a calculation (like <code>rent</code> in <code>rent 500 + 200</code>), words with digits (<code>v99t</code>) and ignored variable names are light grey too. The grey result of a line with a comment appears after the comment. Inside a comment, Tab does nothing, Enter makes a plain new line, and <code>=</code> is just a character.</li>
-      <li><b>Dates.</b> Use <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekday names, or a date with a month name: <code>26 oct</code>, <code>26 oct 2026</code>, <code>oct 26</code>, <code>26th October</code> (no year = this year). Weekdays: <code>friday</code> = the first Friday after today; <code>next friday</code> = Friday of <i>next week</i> (weeks run Monday to Sunday); <code>last friday</code> = the most recent Friday before today. Add or subtract whole <b>days, weeks, months, years</b>: <code>today + 2 weeks</code>, <code>tomorrow - 3 days</code>, <code>next friday + 1 month</code>. Two dates subtracted give the days between. A weekday written next to a full date (<code>Fri 6 Nov</code>) is just a label. Month maths stops at month end (31 Jan + 1 month = 28 Feb). Numeric dates like 26/10/2026 are not supported. Dates can't be stored in variables.</li>
+      <li><b>Several calculations on one line.</b> A <code>;</code> starts a new calculation straight away. A <b>space</b> also starts a new one when a number, bracket or date follows a finished number, bracket or date with no operator between them (<code>30+4 2+3</code>, <code>today tomorrow</code>). Spaces around operators (<code>3 + 4</code>) change nothing, and <code>2 v</code> with a variable still multiplies. Only the <b>last</b> calculation on a line shows the live grey result and can be locked. Any earlier calculation you didn't lock with <code>=</code>, Tab or Shift+Enter is treated as ignored and shown <s>struck through</s>, with no result. Bare numbers are never struck (<code>5 6</code> is just two numbers). After a locked result, a space followed by a new calculation starts a new one (<code>3+4=7 5*2</code>); a space followed by an operator continues the chain (<code>3+4=7 +5</code>); to begin a new calculation with a minus sign, use <code>;</code>. A trailing space keeps the grey result of what you just typed (<code>30+4 </code> still shows <span class="g">=34</span>).</li>
+      <li><b>Comments.</b> A <code>#</code> anywhere starts a comment that runs to the end of the line, shown <span class="c">light grey</span> and ignored. <b>A line containing a <code>#</code> shows no live grey result</b> (locking with <code>=</code> before the <code>#</code> still works). Words the app ignores inside a calculation (like <code>rent</code> in <code>rent 500 + 200</code>), words with digits (<code>v99t</code>) and ignored variable names are light grey too. Inside a comment, Tab does nothing, Shift+Enter makes a plain new line (no lock), and <code>=</code> is just a character.</li>
+      <li><b>Dates.</b> Use <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekday names, or a date with a month name: <code>26 oct</code>, <code>26 oct 2026</code>, <code>oct 26</code>, <code>26th October</code> (no year = this year). Weekdays: <code>friday</code> = the first Friday after today; <code>next friday</code> = Friday of <i>next week</i> (weeks run Monday to Sunday); <code>last friday</code> = the most recent Friday before today. Add or subtract whole <b>days, weeks, months, years</b>: <code>today + 2 weeks</code>, <code>tomorrow - 3 days</code>, <code>next friday + 1 month</code>. Two dates subtracted give the days between. A weekday written next to a full date (<code>Fri 6 Nov</code>) is just a label. Month maths stops at month end (31 Jan + 1 month = 28 Feb). Numeric dates like 26/10/2026 are not supported. Dates can't be stored in variables. Holidays, working days and business days are not handled.</li>
+      <li><b>Dash terms.</b> A date or unit joined with dashes is read as one term: <code>20-march-2026</code>, <code>3-weeks</code>, <code>1-day</code>. You can type them yourself, or let autocomplete do it: type <code>20 marc</code> and the grey ghost shows <code>h-2026</code>; Tab turns the whole thing into <code>20-march-2026</code> (the current year is filled in and then pinned into the text). Likewise <code>3 we</code> + Tab gives <code>3-weeks</code>. A dash with spaces around it (<code>20 - 3</code>) is still a minus, and <code>20-3</code> is still 17. A date typed without a year (<code>20 march</code>) keeps meaning the <i>current</i> year, so it will change on 1 January; use Tab to pin the year. Words like <code>days</code>, <code>day</code>, <code>weeks</code>, <code>months</code>, <code>years</code> can't be variable names.</li>
+      <li><b>Calendar functions.</b> Convert between days, weeks, months and years with the exact words <code>days-to-weeks</code>, <code>days-to-months</code>, <code>days-to-years</code>, <code>weeks-to-days</code>, <code>weeks-to-months</code>, and so on (all 12 pairs, singular or plural; no spaces around the dashes). Days are the smallest unit and results are whole numbers: <code>10 days-to-weeks</code> = <span class="gr">1 week 3 days</span>. <b>After a date subtraction</b> (typed directly or locked, e.g. <code>27 mar 2027 - today days-to-months</code>) the answer is calendar-exact: whole years, then whole months from the earlier date (stopping at month end, 31 Jan + 1 month = 28 Feb), then leftover days. In that case the function must start with <code>days-to-</code>. <b>After a locked day count the word "days" is shared with the function:</b> type <code>-to-weeks</code> straight after <code>=-63 days</code>, or a space and the whole <code>days-to-weeks</code>; either way the line reads <code>=-63 days-to-weeks</code> with "days" appearing once (an older doubled <code>=-63 days days-to-weeks</code> repairs itself). <b>After a plain number</b> (<code>150 days-to-months</code>) it uses a rough rule: week = 7 days, month = 30 days, year = 360 days. Zero units are left out; a negative span shows a minus on the front. The result is text and can't be used in further maths. Calendar-exact is a counting convention (the start day is not included), not legal advice: courts and contracts may count differently.</li>
       <li><b>Leaving the page open.</b> The app checks the date every 30 seconds, and when you return to the tab. If the day changes, results that use today, tomorrow, yesterday or weekday names are recalculated automatically (locked ones too) and a banner tells you. Dates you typed out in full never change. The toolbar shows the date the app is using.</li>
-      <li><b>Autocomplete.</b> When you type 2+ letters at the end of a line, the rest appears in grey: <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekdays, months, and <b>your own variable names</b> (date words are checked first). Press <code>Tab</code> or <code>→</code> to accept. After a number it suggests <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code> instead (<code>mo</code> becomes months, not Monday). After a locked result and a space, you're starting a new calculation, so normal suggestions apply. No suggestions inside a comment. While a suggestion shows, the result on that line is hidden and Enter makes a plain new line.</li>
+      <li><b>Autocomplete.</b> When you type 2+ letters at the end of a line, the rest appears in grey: <code>today</code>, <code>tomorrow</code>, <code>yesterday</code>, weekdays, months, and <b>your own variable names</b> (date words are checked first). After a whole number it suggests <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code> first (<code>mo</code> becomes months, not Monday) and then month names, and accepting rewrites the term with dashes. Inside a calendar function it completes the second unit (<code>days-to-we</code> suggests <code>eks</code>). Press <code>Tab</code> or <code>→</code> to accept. After a locked result and a space you're starting a new calculation, so normal suggestions apply. No suggestions inside a comment. While a suggestion shows, the result on that line is hidden.</li>
       <li><b>Unfinished input.</b> <code>39+1+</code> still shows <span class="g">=40</span>, and open brackets are closed for you.</li>
-      <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code> (when no suggestion is showing), or press <code>Enter</code>. The last calculation's answer turns blue (or green for dates). Enter also starts a new line, but only if the line has a live result and the caret is not inside a comment. <code>Shift+Enter</code> always gives a plain new line. <code>=</code> and <code>Tab</code> are ignored when there is nothing new to lock (right after a result, on an empty line, or right after <code>;</code>), so you can't duplicate a result. Keep typing an operator after a locked result to continue from it (<code>today=</code> then <code>+ 3 days</code>). Edit anything earlier and the locked results update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a locked result; type a space or an operator first.</li>
+      <li><b>Locking a result.</b> Type <code>=</code>, press <code>Tab</code> (when no suggestion is showing), or press <code>Shift+Enter</code>. The last calculation's answer turns blue (green for dates and day counts). <code>=</code> and <code>Tab</code> are ignored when there is nothing new to lock (right after a result, on an empty line, or right after <code>;</code>), so you can't duplicate a result. Keep typing an operator after a locked result to continue from it (<code>today=</code> then <code>+ 3 days</code>). A locked day count can be followed by a calendar function (<code>27 mar 2027 - today=148 days-to-months</code>); the word "days" is shared, see Calendar functions. Edit anything earlier and the locked results update. Backspace removes the <code>=</code> and its result together. A digit can't be typed straight after a locked result; type a space or an operator first. Don't type the words <code>days</code>, <code>weeks</code>, <code>months</code> or <code>years</code> right after a locked number (e.g. <code>=5 weeks</code>), except as the start of a calendar function like <code>days-to-weeks</code>: otherwise the app reads them as part of the result.</li>
       <li><b>Variables.</b> Type <code>name=number</code> (e.g. <code>v=1.5</code>) and it turns <span class="r">red</span>; later uses of the name are red too. Names are letters only, not case-sensitive, and whole-word: <code>v</code> and <code>vv</code> are different variables. Several can share a line: <code>v=1 rr=2 dd=4</code> or <code>v=1 ; rr=2</code>. Variables work on <b>every</b> line, above or below where they're defined. <code>2v</code> multiplies (=3), <code>1+v</code> = 2.5, and <code>today + n days</code> works. If a name is defined twice, the lowest definition wins. Names containing digits (<code>v99t=3</code>) are treated as comments. A definition must come first in its line or after a <code>;</code>, and a variable definition is never struck through.</li>
       <li><b>Reserved words can't be variables.</b> A variable with one of these names is ignored: a grey note appears on the line and it shows dimmed in the variable list. (Typing <code>today=</code> or <code>sun=</code> locks the date instead, since <code>=</code> means lock.) Reserved: <span id="resList"></span></li>
       <li><b>Variable list.</b> Every detected variable and its value is shown under the box. A name defined more than once is flagged in red with the line that wins. Ignored names appear dimmed.</li>
       <li><b>Saving.</b> Everything you type and your settings are saved automatically in this browser (the toolbar shows when). It is <b>not a backup</b>: clearing browser data, a private window, or moving the file (in some browsers) loses it. <code>Clear</code> deletes the sheet and its saved copy after asking.</li>
       <li><b>Popup window.</b> "Open in popup" opens Calculiner in its own small window. It can't stay on top of other windows (browsers don't allow that). The popup and the main window share the same saved sheet and stay in sync; type in one at a time.</li>
-      <li><b>Comment words in calculations.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. A weekday word (<code>sat</code>, <code>sun</code>, <code>wed</code>, <code>mon</code> ...) anywhere is read as a date, and a month word next to a day number (<code>mar 5</code>) is too. A 4-digit number right after a day and month is read as the year.</li>
+      <li><b>Comment words in calculations.</b> Letters, commas and other punctuation are skipped, so <code>rent 500 + food 200</code> gives 700. Careful: a comment word that matches a defined variable is read as that variable. A weekday word (<code>sat</code>, <code>sun</code>, <code>wed</code>, <code>mon</code> ...) anywhere is read as a date, and a month word next to a day number (<code>mar 5</code>, <code>may-5</code>) is too. A 4-digit number right after a day and month is read as the year.</li>
       <li><b>Rounding.</b> Results are rounded to 2 decimals by default (choose 0 to 5). Each locked result carries forward exactly as shown.</li>
       <li><b>Commas in results.</b> Off by default. Choose International (1,234,567), Indian (12,34,567) or East Asian (123,4567).</li>
-      <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials, impossible dates (31 Feb) and malformed lines show no result, so you never see a wrong number.</li>
+      <li><b>Safeguards.</b> Division by zero, overflow, invalid factorials, impossible dates (31 Feb), non-whole conversions and malformed lines show no result, so you never see a wrong number.</li>
     </ul>
   </details>
 
@@ -170,7 +173,7 @@ const isPopup = location.hash === '#popup';
 if (isPopup) {
   popBtn.style.display = 'none';
   document.body.classList.add('popup');
-  document.title = 'Calculiner v1.0 (popup)';
+  document.title = 'Calculiner v1.4 (popup)';
 }
 
 /* ---------- Saving (autosave to this browser) ---------- */
@@ -244,6 +247,7 @@ let focused = false;
 let knownVars = [];     // variable names currently defined (for autocomplete)
 let relUsed = false;    // did this pass use today/tomorrow/yesterday/weekday words?
 let lastRelUsed = false;
+let shiftHeld = false; // is Shift down? (beforeinput events don't carry it)
 
 function group(intPart, style) {
   if (style === 'indian') {
@@ -299,6 +303,13 @@ const RESERVED = new Set([
 ]);
 document.getElementById('resList').textContent = [...RESERVED].sort().join(', ');
 
+/* calendar functions: days-to-weeks, weeks-to-months, ... */
+const FUNC_RE = /^(days?|weeks?|months?|years?)-to-(days?|weeks?|months?|years?)(?![\p{L}\d])/iu;
+const FUNC_AT = /^\s*(?:days?|weeks?|months?|years?)-to-(?:days?|weeks?|months?|years?)(?![\p{L}\d])/iu;
+/* "days-to-" (even half typed): after a locked day count it shares the word "days" with the result */
+const MERGE_AT = /^\s*days?-to-/i;
+const unitOf = s => s[0].toLowerCase();       // d / w / m / y
+
 /* ---------- Date helpers (dates are whole UTC day numbers) ---------- */
 function todayDay() {
   const n = new Date();
@@ -353,14 +364,86 @@ function fmtDate(day) {
 }
 function fmtVal(x) {
   if (x.t === 'date') return fmtDate(x.v);
+  if (x.t === 'cal') return x.text;
   if (x.t === 'days') return fmt(x.v) + (Math.abs(x.v) === 1 ? ' day' : ' days');
   return fmt(x.v);
 }
 
+/* ---------- Calendar functions ----------
+   Exact: when the days came from a date subtraction, count whole years, then whole months
+   from the EARLIER date (clamping to month end), then leftover days.
+   Rough (bare numbers): week = 7 days, month = 30 days, year = 360 days (12 x 30).
+   Results are text, days are the smallest unit, zero units are left out. */
+const FB = { d: 1, w: 7, m: 30, y: 360 };
+const NAMES = { d: 'day', w: 'week', m: 'month', y: 'year' };
+
+function calParts(start, n) {                    // whole months from `start` to start+n, plus leftover days
+  const end = start + n;
+  const [sy, sm] = ymd(start), [ey, em] = ymd(end);
+  let tm = (ey - sy) * 12 + (em - sm);
+  while (tm > 0 && addMonths(start, tm) > end) tm--;
+  return { tm, days: end - addMonths(start, tm) };
+}
+function calText(parts, unit, neg) {
+  const shown = parts.filter(p => p[0] !== 0)
+    .map(p => p[0] + ' ' + NAMES[p[1]] + (p[0] === 1 ? '' : 's'));
+  if (!shown.length) return '0 ' + NAMES[unit] + 's';
+  return (neg ? '-' : '') + shown.join(' ');
+}
+function applyFunc(base, f) {
+  if (base.t === 'date' || base.t === 'cal') throw new Error('cannot convert');
+  const v = parseFloat(base.v.toPrecision(12));
+  if (!Number.isInteger(v) || Math.abs(v) > 1e7) throw new Error('whole numbers only');
+  const neg = v < 0, a = Math.abs(v);
+  let days, start = null;
+  if (base.t === 'days') {
+    if (f.from !== 'd') throw new Error('unit mismatch');
+    days = a; start = base.start;
+  } else days = a * FB[f.from];
+
+  let parts;
+  if (f.to === 'd') parts = [[days, 'd']];
+  else if (f.to === 'w') parts = [[Math.floor(days / 7), 'w'], [days % 7, 'd']];
+  else {
+    let years = 0, months, rem;
+    if (start !== null && start !== undefined) {
+      const c = calParts(start, days);
+      years = f.to === 'y' ? Math.floor(c.tm / 12) : 0;
+      months = f.to === 'y' ? c.tm % 12 : c.tm;
+      rem = c.days;
+    } else {
+      years = f.to === 'y' ? Math.floor(days / FB.y) : 0;
+      const r = days - years * FB.y;
+      months = Math.floor(r / FB.m);
+      rem = r % FB.m;
+    }
+    parts = f.to === 'y' ? [[years, 'y'], [months, 'm'], [rem, 'd']] : [[months, 'm'], [rem, 'd']];
+  }
+  return { t: 'cal', text: calText(parts, f.to, neg) };
+}
+
 /* ---------- Tokenizer ----------
-   Numbers, operators, letter-only words, and "junk" (words containing digits, e.g. v99t).
-   Commas and other punctuation (including ×) are ignored. Every token remembers its
-   start/end offsets in the original text so words can be coloured. */
+   Numbers, operators, calendar functions, letter-only words, and "junk" (words containing
+   digits, e.g. v99t). Commas and other punctuation (including ×) are ignored. A "-" that
+   touches both sides of a date/unit term (20-march-2026, 3-weeks) is a joiner, not a minus.
+   Every token remembers its start/end offsets in the original text so words can be coloured. */
+function dashJoins(str, i, tokens, map) {
+  const prev = tokens[tokens.length - 1];
+  if (!prev || prev.e !== map[i]) return false;                   // the dash must touch the previous token
+  const rest = str.slice(i + 1);
+  if (prev.t === 'word' && MONTHS.has(prev.name)) return /^\d/.test(rest);          // march-20, 20-march-2026
+  if (prev.t !== 'num') return false;
+  if (FUNC_RE.test(rest)) return true;                                               // 10-days-to-weeks
+  const w = rest.match(/^(\p{L}+)(?![\p{L}\d])/u);
+  if (w) { const n = w[1].toLowerCase(); return UNITS.has(n) || MONTHS.has(n); }    // 3-weeks, 20-march
+  const y = rest.match(/^(\d{4})(?![\d.])/);                                        // march-20-2026
+  if (y && Number.isInteger(prev.v) && prev.v >= 1 && prev.v <= 31) {
+    const pp = tokens[tokens.length - 2];
+    return !!(pp && pp.t === 'word' && MONTHS.has(pp.name) && pp.e + 1 === prev.s);
+  }
+  return false;
+}
+
 function tokenize(s) {
   let str = '';
   const map = [];
@@ -370,7 +453,12 @@ function tokenize(s) {
     map.push(k);
   }
   const tokens = [];
-  const add = (tok, a, b) => { tok.s = map[a]; tok.e = map[b - 1] + 1; tokens.push(tok); };
+  let joined = false;
+  const add = (tok, a, b) => {
+    tok.s = map[a]; tok.e = map[b - 1] + 1;
+    if (joined) { tok.dashed = true; joined = false; }
+    tokens.push(tok);
+  };
   let i = 0;
   while (i < str.length) {
     const c = str[i];
@@ -382,6 +470,11 @@ function tokenize(s) {
       if (!isFinite(v)) throw new Error('too big');
       add({ t: 'num', v }, i, i + m[0].length); i += m[0].length; continue;
     }
+    m = rest.match(FUNC_RE);
+    if (m) {
+      add({ t: 'func', from: unitOf(m[1]), to: unitOf(m[2]) }, i, i + m[0].length);
+      i += m[0].length; continue;
+    }
     m = rest.match(/^\p{L}[\p{L}\d]*/u);
     if (m) {
       if (/\d/.test(m[0])) add({ t: 'junk' }, i, i + m[0].length);
@@ -389,7 +482,10 @@ function tokenize(s) {
       i += m[0].length; continue;
     }
     if (c === '+') { add({ t: '+' }, i, i + 1); i++; continue; }
-    if ('-−–'.includes(c)) { add({ t: '-' }, i, i + 1); i++; continue; }
+    if ('-−–'.includes(c)) {
+      if (c === '-' && dashJoins(str, i, tokens, map)) { joined = true; i++; continue; }
+      add({ t: '-' }, i, i + 1); i++; continue;
+    }
     if (c === '*') { add({ t: '*' }, i, i + 1); i++; continue; }
     if ('/÷'.includes(c)) { add({ t: '/' }, i, i + 1); i++; continue; }
     if ('()%!'.includes(c)) { add({ t: c }, i, i + 1); i++; continue; }
@@ -399,7 +495,7 @@ function tokenize(s) {
 }
 
 /* Turn today/tomorrow/yesterday, weekdays ("next friday"), and "26 oct [2026]" /
-   "oct 26 [2026]" / "26th October" into single date tokens. Reserved words can
+   "oct 26 [2026]" / "26th October" / "26-oct-2026" into single date tokens. Reserved words can
    never be variables, so no variable check is needed here. */
 function groupDates(tokens) {
   const isDay = t => t && t.t === 'num' && Number.isInteger(t.v) && t.v >= 1 && t.v <= 31;
@@ -486,7 +582,11 @@ function resolve(tokens, env, seeded, dateMode, dropped) {
       continue;
     }
     if (dateMode && UNITS.has(t.name) && out.length && out[out.length - 1].t === 'num') {
-      out.push({ t: 'unit', unit: UNITS.get(t.name), s: t.s, e: t.e });
+      const pn = out[out.length - 1];
+      out.push({
+        t: 'unit', unit: UNITS.get(t.name), s: t.s, e: t.e,
+        cs: (t.dashed && pn.s !== undefined) ? pn.s : t.s          // "3-weeks" is coloured as one term
+      });
       continue;
     }
     dropped.push({ s: t.s, e: t.e });
@@ -501,8 +601,8 @@ function build(text, env, seed) {
   const dropped = [];
   const toks = resolve(grouped, env, !!seed, dateMode, dropped);
   const spans = toks
-    .filter(x => x.t === 'date' || x.t === 'unit' || x.isVar)
-    .map(x => ({ s: x.s, e: x.e, cls: x.isVar ? 'def' : 'dt' }))
+    .filter(x => x.t === 'date' || x.t === 'unit' || x.t === 'func' || x.isVar)
+    .map(x => ({ s: x.cs !== undefined ? x.cs : x.s, e: x.e, cls: x.isVar ? 'def' : 'dt' }))
     .concat(dropped.map(d => ({ s: d.s, e: d.e, cls: 'cm' })));
   spans.sort((a, b) => a.s - b.s);
   return { toks, dateMode, spans };
@@ -590,7 +690,7 @@ function evalTokens(tokens) {
 /* ---------- Date evaluator ----------
    Terms: a date, or "<whole number> <unit>". Signs apply to each term.
    - one date (+) with any number of durations  -> a date
-   - two dates (one +, one -) and nothing else   -> days between
+   - two dates (one +, one -) and nothing else   -> days between (remembers the earlier date)
    Anything else shows no result. */
 function evalDate(tokens) {
   let p = 0, sgn = 1;
@@ -618,9 +718,32 @@ function evalDate(tokens) {
     return { t: 'date', v: d };
   }
   if (dates.length === 2 && durs.length === 0 && dates[0].s !== dates[1].s) {
-    return { t: 'days', v: dates[0].s * dates[0].v + dates[1].s * dates[1].v };
+    return {
+      t: 'days',
+      v: dates[0].s * dates[0].v + dates[1].s * dates[1].v,
+      start: Math.min(dates[0].v, dates[1].v)
+    };
   }
   throw new Error('date expression');
+}
+
+/* A calendar function is a postfix: "<value> days-to-months". It must come last. */
+function evalFuncSeg(tokens, dateMode) {
+  const last = tokens[tokens.length - 1];
+  if (tokens.filter(x => x.t === 'func').length !== 1 || last.t !== 'func') throw new Error('function must come last');
+  const rest = tokens.slice(0, -1);
+  if (!rest.length) throw new Error('nothing to convert');
+  let base;
+  if (rest.length === 1 && rest[0].t === 'num' && rest[0].start !== undefined) {
+    base = { t: 'days', v: rest[0].v, start: rest[0].start };           // locked day count from a date subtraction
+  } else if (dateMode) base = evalDate(rest);
+  else base = { t: 'num', v: evalTokens(rest) };
+  return applyFunc(base, last);
+}
+
+function evalOwn(tokens, dateMode) {
+  if (tokens.some(x => x.t === 'func')) return evalFuncSeg(tokens, dateMode);
+  return dateMode ? evalDate(tokens) : { t: 'num', v: roundDec(evalTokens(tokens)) };
 }
 
 /* ---------- Line model ----------
@@ -633,9 +756,11 @@ function evalDate(tokens) {
    R_k (the locked result after each "=") is app-managed and always equals the value of
    everything before it in its unit. Only the last unit of the last chunk is "active"
    (live result, can be locked); earlier unlocked calculations are shown struck through. */
+const U_ = '(?:years?|months?|weeks?|days?)(?![\\p{L}])(?!-to-)';
 const RUN_RE = new RegExp(
   '^(?:(?:' + WD.join('|') + '), \\d{1,2} (?:' + MON.join('|') + ') \\d{4}' +
-  '|-?\\d[\\d,]*(?:\\.\\d+)?(?:e[+-]\\d+)?(?: days?(?!\\p{L}))?)', 'iu');
+  '|-?\\d[\\d,]* ' + U_ + '(?: \\d+ ' + U_ + ')*' +
+  '|-?\\d[\\d,]*(?:\\.\\d+)?(?:e[+-]\\d+)?)', 'iu');
 const NEWCALC_RE = /^\s+(?=[\d(]|\.\d|\p{L})/u;
 
 /* Split text into coloured parts. strike = [a, b) range to mark as ignored (struck through). */
@@ -709,7 +834,7 @@ function findBreaks(text, env) {
     }
     seq.push(t);
   }
-  const isEnd = t => ['num', 'date', 'bad', 'unit', ')', '%', '!'].includes(t.t);
+  const isEnd = t => ['num', 'date', 'bad', 'unit', 'func', ')', '%', '!'].includes(t.t);
   const isStart = t => ['num', 'date', 'bad', '('].includes(t.t);
   const breaks = [];
   let depth = 0;
@@ -743,7 +868,7 @@ function splitUnits(T, env) {
     const restStart = pos + run.length;
     let contRun = null;                    // set when the first fragment continues the current chain
     if (i === 0) begin(0);
-    else if (run && NEWCALC_RE.test(rest)) {
+    else if (run && NEWCALC_RE.test(rest) && !FUNC_AT.test(rest) && !MERGE_AT.test(rest)) {
       cur.runsOld.push(run); cur.exprs.push('');
       cur.end = restStart;
       begin(restStart);
@@ -784,14 +909,16 @@ function analyzeUnit(u, env, strict, active) {
         const own = prep(b.toks);
         if (j === 0) {
           if (strict && own.length && ['+', '-', '*', '/', ')', '%', '!'].includes(own[0].t)) throw new Error('start');
-          v = b.dateMode ? evalDate(own) : { t: 'num', v: roundDec(evalTokens(own)) };
+          v = evalOwn(own, b.dateMode);
           g = b.toks.length > 1 || (b.toks.length === 1 && b.toks[0].t === 'date');
         } else if (own.length === 0) {
           v = prev;
         } else {
-          const seed = prev.t === 'date' ? { t: 'date', v: prev.v } : { t: 'num', v: prev.v };
-          const all = [seed].concat(own);
-          v = b.dateMode ? evalDate(all) : { t: 'num', v: roundDec(evalTokens(all)) };
+          let seed;
+          if (prev.t === 'date') seed = { t: 'date', v: prev.v };
+          else if (prev.t === 'cal') throw new Error('no maths on a converted result');
+          else seed = { t: 'num', v: prev.v, start: prev.t === 'days' ? prev.start : undefined };
+          v = evalOwn([seed].concat(own), b.dateMode);
           g = true;
         }
       } catch (e) { v = null; g = false; }
@@ -810,7 +937,9 @@ function analyzeUnit(u, env, strict, active) {
   for (let j = 0; j < n; j++) {
     if (j > 0) {
       const pv = vals[j - 1];
-      const runNew = pv !== null ? fmtVal(pv) : '';
+      // a locked day count followed by "days-to-..." shares the word "days": show only the number
+      const share = pv !== null && pv.t === 'days' && MERGE_AT.test(exprs[j]);
+      const runNew = pv !== null ? (share ? fmt(pv.v) : fmtVal(pv)) : '';
       const o0 = o + 1, o1 = o0 + runsOld[j].length;
       const eq = text.length;
       text += '=' + runNew;
@@ -926,6 +1055,7 @@ function analyzeLine(line, preChunks, env) {
     return Object.assign({}, comp, {
       text: comp.text + comment,
       parts: comp.parts.concat([{ text: comment, cls: 'cm' }]),
+      ghost: null,                                         // lines with a # comment show no live result
       map: c => (c <= code.length ? comp.map(c) : base + (c - code.length))
     });
   };
@@ -947,9 +1077,10 @@ function analyzeLine(line, preChunks, env) {
 }
 
 /* ---------- Autocomplete ----------
-   Only when the caret is at the end of a line (and not in a comment), after 2+ letters.
-   After a number: units (days/weeks/months/years), then months, then your variables.
-   Elsewhere: today/tomorrow/yesterday, weekdays, months, then your variables. First match wins.
+   Only when the caret is at the end of a line (and not in a comment).
+   - inside a calendar function ("days-to-we"): completes the second unit
+   - after a whole number: units, then months (accepting rewrites the term with dashes), then your variables
+   - elsewhere: today/tomorrow/yesterday, weekdays, months, then your variables. First match wins.
    After a locked result + space, you are starting a new calculation, so no unit mode. */
 const SUG_REL = ['today', 'tomorrow', 'yesterday'];
 const SUG_WD = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -964,30 +1095,65 @@ function computeSuggestion() {
   if (s !== en || s === 0) return null;
   if (s < text.length && text[s] !== '\n') return null;
   const head = text.slice(0, s);
-  const before = head.slice(head.lastIndexOf('\n') + 1);
+  const lineStart = head.lastIndexOf('\n') + 1;
+  const before = head.slice(lineStart);
   if (before.includes('#')) return null;
+  const mk = (rem, apply) => ({ rem, apply, line: head.split('\n').length - 1, caret: s, visible: false });
+
+  // second unit of a calendar function
+  const fm = before.match(/(?:days?|weeks?|months?|years?)-to-(\p{L}+)$/iu);
+  if (fm) {
+    const at = before.length - fm[0].length;
+    if (at > 0 && /\p{L}/u.test(before[at - 1])) return null;
+    const typed = fm[1].toLowerCase();
+    const cand = SUG_UP.find(c => c.length > typed.length && c.startsWith(typed));
+    return cand ? mk(cand.slice(typed.length), null) : null;
+  }
+  if (/(?:days?|weeks?|months?|years?)-t?o?$/iu.test(before)) return null;     // "days-t" / "days-to": no stray "today"
+
   const m = before.match(/(\p{L}+)$/u);
   if (!m || m[1].length < 2) return null;
   const prefix = before.slice(0, before.length - m[1].length);
   if (/\p{L}[\p{L}\d]*$/u.test(prefix)) return null;            // part of a name like v9t
   const word = m[1].toLowerCase();
-  const pre = prefix.replace(/[\s,]+$/, '');
-  const nm = pre.match(/(\d[\d,]*(?:\.\d+)?)$/);
-  let numMode = !!nm;
-  if (nm && /[\s,]$/.test(prefix)) {
-    const endAbs = (head.length - before.length) + pre.length;
-    if (lastRuns.some(r => r.re === endAbs)) numMode = false;   // number is a locked result
+
+  const nm = prefix.match(/(\d[\d,]*(?:\.\d+)?)([\s,]*|-)$/u);
+  let numMode = !!nm, numText = '', numAbs = -1;
+  if (nm) {
+    numText = nm[1];
+    numAbs = lineStart + nm.index;
+    if (lastRuns.some(r => r.re === numAbs + numText.length)) numMode = false;   // the number is a locked result
   }
-  let list;
+  const startsOk = c => c.length > word.length && c.startsWith(word);
+
+  let cand = null, kind = '';
   if (numMode) {
-    const one = parseFloat(nm[1].replace(/,/g, '')) === 1;
-    list = (one ? SUG_US : SUG_UP).concat(SUG_MON, knownVars);
+    const one = parseFloat(numText.replace(/,/g, '')) === 1;
+    cand = (one ? SUG_US : SUG_UP).find(startsOk); kind = 'unit';
+    if (!cand) { cand = SUG_MON.find(startsOk); kind = 'month'; }
+    if (!cand) { cand = knownVars.find(startsOk); kind = 'var'; }
   } else {
-    list = SUG_REL.concat(SUG_WD, SUG_MON, knownVars);
+    cand = SUG_REL.concat(SUG_WD, SUG_MON).find(startsOk); kind = 'plain';
+    if (!cand) { cand = knownVars.find(startsOk); kind = 'var'; }
   }
-  const cand = list.find(c => c.length > word.length && c.startsWith(word));
   if (!cand) return null;
-  return { rem: cand.slice(word.length), line: head.split('\n').length - 1, caret: s, visible: false };
+  const rem = cand.slice(word.length);
+
+  // "20 marc" -> ghost "h-2026", Tab gives "20-march-2026";  "3 we" -> ghost "eks", Tab gives "3-weeks"
+  if (numMode && /^\d+$/.test(numText)) {
+    const pc = nm.index > 0 ? prefix[nm.index - 1] : '';
+    if (!/[\p{L}\d.]/u.test(pc)) {
+      if (kind === 'unit') return mk(rem, { from: numAbs, to: s, text: numText + '-' + cand });
+      if (kind === 'month') {
+        const d = parseInt(numText, 10);
+        if (d >= 1 && d <= 31) {
+          const yr = thisYear();
+          return mk(rem + '-' + yr, { from: numAbs, to: s, text: d + '-' + cand + '-' + yr });
+        }
+      }
+    }
+  }
+  return mk(rem, null);
 }
 
 /* ---------- Rendering ---------- */
@@ -1086,9 +1252,18 @@ function renderVars(info, ignored) {
   }
 }
 
+/* Re-measure the box. Measuring collapses the textarea to 0 height for a moment; at the bottom of a
+   long page that would shrink the document and make the browser clamp the scroll position (the page
+   "jumping" to the top). So: hold the box height while measuring, and restore the scroll afterwards. */
 function autoGrow() {
+  const se = document.scrollingElement || document.documentElement;
+  const top = se.scrollTop, left = se.scrollLeft;
+  box.style.minHeight = box.clientHeight + 'px';
   input.style.height = '0px';
   input.style.height = input.scrollHeight + 'px';
+  box.style.minHeight = '';
+  if (se.scrollTop !== top) se.scrollTop = top;
+  if (se.scrollLeft !== left) se.scrollLeft = left;
 }
 
 function process() { pass(0); }
@@ -1194,13 +1369,62 @@ function sugReady() {
 }
 
 function acceptSuggestion() {
-  const s = input.selectionStart;
-  input.setRangeText(currentSug.rem, s, s, 'end');
+  const s = input.selectionStart, a = currentSug.apply;
+  if (a) input.setRangeText(a.text, a.from, a.to, 'end');        // rewrites the term with dashes
+  else input.setRangeText(currentSug.rem, s, s, 'end');
   process();
 }
 
+/* Scroll the page just enough to show the line the caret is on (only used by explicit key actions) */
+function revealCaret() {
+  const idx = input.value.slice(0, input.selectionEnd).split('\n').length - 1;
+  const row = overlay.children[idx];
+  if (!row) return;
+  const r = row.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  if (r.bottom > vh - 12) window.scrollBy(0, r.bottom - vh + 28);
+  else if (r.top < 12) window.scrollBy(0, r.top - 28);
+}
+
+/* Enter: move the caret to the end of the NEXT line. Never adds a line. Does nothing on the last line. */
+function moveToNextLine() {
+  const text = input.value;
+  const pos = input.selectionEnd;
+  const nl = text.indexOf('\n', pos);
+  if (nl < 0) return;                                  // last line (or the only line): stay
+  let end = text.indexOf('\n', nl + 1);
+  if (end < 0) end = text.length;
+  input.setSelectionRange(end, end);
+  process();
+  revealCaret();
+}
+
+/* Track Shift ourselves: beforeinput events don't say whether Shift is down. */
+window.addEventListener('keydown', e => { shiftHeld = e.shiftKey; }, true);
+window.addEventListener('keyup', e => { shiftHeld = e.shiftKey; }, true);
+window.addEventListener('blur', () => { shiftHeld = false; });
+
 input.addEventListener('keydown', e => {
   if (e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
+
+  /* Joining or removing a line break needs Shift: Shift+Backspace (or Shift+Delete).
+     Plain Backspace / Delete at a line boundary does nothing. (Selections are handled in beforeinput.) */
+  if (e.key === 'Backspace' || e.key === 'Delete') {
+    const s = input.selectionStart, en = input.selectionEnd, text = input.value;
+    if (s === en) {
+      const back = e.key === 'Backspace';
+      const atBreak = back ? (s > 0 && text[s - 1] === '\n') : (s < text.length && text[s] === '\n');
+      if (atBreak) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (back) input.setRangeText('', s - 1, s, 'end');
+          else input.setRangeText('', s, s + 1, 'end');
+          process();
+        }
+        return;
+      }
+    }
+  }
 
   /* Tab: accept a visible suggestion, otherwise act as "=" (Shift+Tab still moves focus) */
   if (e.key === 'Tab' && !e.shiftKey) {
@@ -1216,10 +1440,16 @@ input.addEventListener('keydown', e => {
     return;
   }
 
-  /* Enter = lock the result (like "=") and start a new line.
-     Plain new line if: a suggestion is showing, caret in a comment, nothing to calculate,
-     cursor not at line end, or Shift held. */
-  if (e.key === 'Enter' && !e.shiftKey) {
+  /* Enter       = move to the next line (no new line is created).
+     Shift+Enter = add a new line and move onto it; if the line has a live result, lock it first.
+     Plain new line (browser default) if: a suggestion is showing, caret in a comment,
+     text is selected, nothing to lock, or the caret is not at the end of the line. */
+  if (e.key === 'Enter') {
+    if (!e.shiftKey) {
+      e.preventDefault();
+      moveToNextLine();
+      return;
+    }
     if (sugReady()) return;
     const s = input.selectionStart, en = input.selectionEnd, text = input.value;
     if (s !== en) return;
@@ -1231,15 +1461,45 @@ input.addEventListener('keydown', e => {
       e.preventDefault();
       input.setRangeText('=\n', s, s, 'end');
       process();
+      revealCaret();
     }
   }
 });
+
+/* ---- Deleting ----
+   Backspace / Delete / cut only ever remove CHARACTERS. A line break inside the deleted range is kept
+   (the selected text on each line is cleared, the lines stay). Only Shift+Backspace / Shift+Delete
+   may remove line breaks. */
+function deletionRange(type, s, en, text) {
+  if (type === 'deleteByDrag') return null;                       // drag-and-drop moves: leave to the browser
+  if (s !== en) return [s, en];
+  const ls = text.slice(0, s).lastIndexOf('\n') + 1;
+  let le = text.indexOf('\n', s); if (le < 0) le = text.length;
+  switch (type) {
+    case 'deleteContentBackward': return [Math.max(0, s - 1), s];
+    case 'deleteContentForward': return [s, Math.min(text.length, s + 1)];
+    case 'deleteWordBackward': {
+      const m = text.slice(ls, s).match(/\s*(?:[\p{L}\d_]+|[^\s\p{L}\d_]+)$|\s+$/u);
+      return [m ? s - m[0].length : s, s];
+    }
+    case 'deleteWordForward': {
+      const m = text.slice(s, le).match(/^(?:[\p{L}\d_]+|[^\s\p{L}\d_]+|\s+)\s*/u);
+      return [s, m ? s + m[0].length : s];
+    }
+    case 'deleteSoftLineBackward':
+    case 'deleteHardLineBackward': return [ls, s];
+    case 'deleteSoftLineForward':
+    case 'deleteHardLineForward': return [s, le];
+    default: return [s, en];
+  }
+}
 
 /* "=" + result behave as one unit when deleting; typing starts after the result;
    a typed "=" with nothing new to lock is ignored (but is literal inside a comment) */
 input.addEventListener('beforeinput', e => {
   const t = e.inputType || '';
   const s = input.selectionStart, en = input.selectionEnd;
+  const text = input.value;
 
   if (t === 'insertText' && e.data === '=' && s === en && !inComment(s)) {
     const st = lockState(s);
@@ -1250,27 +1510,49 @@ input.addEventListener('beforeinput', e => {
     }
   }
 
-  const runs = lastRuns;
-  if (!runs.length) return;
-
-  if (t === 'deleteContentBackward' || t === 'deleteContentForward') {
-    let a = s, b = en;
-    if (a === b) {
-      if (t === 'deleteContentBackward') a = Math.max(0, a - 1);
-      else b = Math.min(input.value.length, b + 1);
+  /* --- deletes --- */
+  if (t.startsWith('delete')) {
+    const r = deletionRange(t, s, en, text);
+    if (!r) return;
+    const a0 = r[0], b0 = r[1];
+    if (a0 === b0) { e.preventDefault(); return; }
+    let a = a0, b = b0;
+    for (const run of lastRuns) {                                  // "=" and its result go together
+      if (a < run.re && b > run.eq) { a = Math.min(a, run.eq); b = Math.max(b, run.re); }
     }
-    let a2 = a, b2 = b;
-    for (const r of runs) {
-      if (a < r.re && b > r.eq) { a2 = Math.min(a2, r.eq); b2 = Math.max(b2, r.re); }
-    }
-    if (a2 !== a || b2 !== b) {
+    const seg = text.slice(a, b);
+    const hasBreak = seg.includes('\n');
+    if (hasBreak && !shiftHeld) {
       e.preventDefault();
-      input.setRangeText('', a2, b2, 'end');
+      const keep = seg.replace(/[^\n]/g, '');                      // keep every line break
+      if (keep.length === seg.length) return;                      // only line breaks selected: nothing to delete
+      input.setRangeText(keep, a, b, 'start');
+      process();
+      return;
+    }
+    if (a !== a0 || b !== b0 || (t !== 'deleteContentBackward' && t !== 'deleteContentForward')) {
+      e.preventDefault();
+      input.setRangeText('', a, b, 'start');
       process();
     }
+    return;                                                        // otherwise: let the browser delete normally
+  }
+
+  /* --- typing over a selection that spans several lines: keep the line breaks --- */
+  if (t === 'insertText' && s !== en && text.slice(s, en).includes('\n')) {
+    e.preventDefault();
+    const keep = text.slice(s, en).replace(/[^\n]/g, '');
+    const data = e.data || '';
+    input.setRangeText(data + keep, s, en, 'end');
+    const c = s + data.length;
+    input.setSelectionRange(c, c);
+    process();
     return;
   }
 
+  /* --- typing next to a locked result --- */
+  const runs = lastRuns;
+  if (!runs.length) return;
   if (t.startsWith('insert') && s === en) {
     for (const r of runs) {
       if (s > r.eq && s <= r.re && r.re > r.rs) {
